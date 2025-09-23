@@ -4,21 +4,24 @@ export type RootStackParamList = {
   Register: undefined;
   // App tabs
   Home: undefined;
-  Players: undefined;
-  Transfers: undefined;
+  "Pick Team": undefined;
+  Fixtures: undefined;
+  Points: undefined;
   Leagues: undefined;
   Profile: undefined;
 };
 
 export type AuthStackParamList = {
+  Splash: undefined;
   Login: undefined;
   Register: undefined;
 };
 
 export type AppTabParamList = {
   Home: undefined;
-  Players: undefined;
-  Transfers: undefined;
+  "Pick Team": undefined;
+  Fixtures: undefined;
+  Points: undefined;
   Leagues: undefined;
   Profile: undefined;
 };

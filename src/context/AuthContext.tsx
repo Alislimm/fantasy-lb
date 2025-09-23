@@ -5,6 +5,7 @@ type AuthUser = {
   id: number;
   email: string;
   roles?: string[];
+  hasFantasyTeam?: boolean;
 };
 
 type AuthState = {
