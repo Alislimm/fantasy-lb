@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View, StyleSheet, Dimensions, Image } from "react-native";
+import { View, StyleSheet, Dimensions, Image, KeyboardAvoidingView, ScrollView, Platform } from "react-native";
 import { TextInput, Button, Text } from "react-native-paper";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { LinearGradient } from "expo-linear-gradient";
@@ -8,6 +8,7 @@ import type { AuthStackParamList } from "../navigation/types";
 import { useMutation } from "@tanstack/react-query";
 import { loginApi } from "../services/api";
 import { useAuth } from "../hooks/useAuth";
+import { hasFantasyTeam } from "../services/api";
 
 const { width, height } = Dimensions.get('window');
 
@@ -36,7 +37,37 @@ export default function LoginScreen({ navigation }: Props) {
   const mutation = useMutation({
     mutationFn: () => loginApi(usernameOrEmail, password),
     onSuccess: async (data) => {
-      await login(data.token, data.user ?? null);
+      console.log('[Login] Login successful, response data:', data);
+      
+      // Create user object from response
+      const user = {
+        id: data.userId,
+        username: data.username,
+        email: data.username, // Using username as email since email not provided
+        role: data.role
+      };
+      
+      // First login with the user data
+      await login(data.token, user);
+      
+      // Then check if user has a fantasy team
+      if (data.userId) {
+        console.log('[Login] Checking hasFantasyTeam for user ID:', data.userId);
+        try {
+          const hasTeamResponse = await hasFantasyTeam(data.userId);
+          console.log('[Login] hasFantasyTeam response:', hasTeamResponse);
+          // Update user with hasFantasyTeam flag
+          await login(data.token, { ...user, hasFantasyTeam: hasTeamResponse });
+          console.log('[Login] Updated user with hasFantasyTeam:', hasTeamResponse);
+        } catch (error) {
+          console.log('[Login] Error checking hasFantasyTeam:', error);
+          // If API fails, assume no team
+          await login(data.token, { ...user, hasFantasyTeam: false });
+          console.log('[Login] Set hasFantasyTeam to false due to error');
+        }
+      } else {
+        console.log('[Login] No user ID found, skipping hasFantasyTeam check');
+      }
     },
   });
 
@@ -51,75 +82,87 @@ export default function LoginScreen({ navigation }: Props) {
       locations={[0, 0.5, 1]}
       style={[styles.container, { paddingTop: insets.top }]}
     >
-      <View style={styles.content}>
-        {/* Lebanese Basketball Fantasy Logo */}
-        <View style={styles.logoSection}>
-          <LebaneseBasketballLogo />
-        </View>
+      <KeyboardAvoidingView 
+        style={styles.keyboardAvoidingView}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+      >
+        <ScrollView 
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.content}>
+            {/* Lebanese Basketball Fantasy Logo */}
+            <View style={styles.logoSection}>
+              <LebaneseBasketballLogo />
+            </View>
 
-        {/* Login Form */}
-        <View style={styles.formContainer}>
-          <Text style={styles.title}>Welcome Back! 🏀</Text>
-          
-          <TextInput
-            label="Username or Email"
-            value={usernameOrEmail}
-            onChangeText={setUsernameOrEmail}
-            style={styles.input}
-            mode="outlined"
-            left={<TextInput.Icon icon="account" />}
-            outlineColor="#4B0082"
-            activeOutlineColor="#4B0082"
-          />
-          <TextInput
-            label="Password"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-            style={styles.input}
-            mode="outlined"
-            left={<TextInput.Icon icon="lock" />}
-            outlineColor="#4B0082"
-            activeOutlineColor="#4B0082"
-          />
-          {mutation.isError ? (
-            <Text style={styles.errorText}>
-              {(() => {
-                const err = mutation.error as any;
-                const data = err?.response?.data;
-                const msg =
-                  (typeof data === "string" && data) ||
-                  data?.message ||
-                  data?.error ||
-                  err?.message ||
-                  "Login failed";
-                return String(msg);
-              })()}
-            </Text>
-          ) : null}
-          <Button 
-            mode="contained" 
-            onPress={handleLogin} 
-            loading={mutation.isPending} 
-            disabled={mutation.isPending}
-            style={styles.loginButton}
-            labelStyle={styles.buttonText}
-            buttonColor="#CE1126"
-          >
-            Sign In
-          </Button>
+            {/* Login Form */}
+            <View style={styles.formContainer}>
+              <Text style={styles.title}>Welcome Back! 🏀</Text>
+              
+              <TextInput
+                label="Username or Email"
+                value={usernameOrEmail}
+                onChangeText={setUsernameOrEmail}
+                style={styles.input}
+                mode="outlined"
+                left={<TextInput.Icon icon="account" />}
+                outlineColor="#4B0082"
+                activeOutlineColor="#4B0082"
+              />
+              <TextInput
+                label="Password"
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry
+                style={styles.input}
+                mode="outlined"
+                left={<TextInput.Icon icon="lock" />}
+                outlineColor="#4B0082"
+                activeOutlineColor="#4B0082"
+              />
+              {mutation.isError ? (
+                <Text style={styles.errorText}>
+                  {(() => {
+                    const err = mutation.error as any;
+                    const data = err?.response?.data;
+                    const msg =
+                      (typeof data === "string" && data) ||
+                      data?.message ||
+                      data?.error ||
+                      err?.message ||
+                      "Login failed";
+                    return String(msg);
+                  })()}
+                </Text>
+              ) : null}
+              <Button 
+                mode="contained" 
+                onPress={handleLogin} 
+                loading={mutation.isPending} 
+                disabled={mutation.isPending}
+                style={styles.loginButton}
+                labelStyle={styles.buttonText}
+                buttonColor="#CE1126"
+              >
+                Sign In
+              </Button>
 
-          <Button 
-            mode="text" 
-            onPress={() => navigation.navigate("Register")}
-            style={styles.linkButton}
-            labelStyle={styles.linkText}
-            textColor="#00A651"
-          >
-            Not registered yet? Sign Up
-          </Button>
-        </View>
-      </View>
+              <Button 
+                mode="text" 
+                onPress={() => navigation.navigate("Register")}
+                style={styles.linkButton}
+                labelStyle={styles.linkText}
+                textColor="#00A651"
+              >
+                Not registered yet? Sign Up
+              </Button>
+            </View>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </LinearGradient>
   );
 }
@@ -128,18 +171,26 @@ const styles = StyleSheet.create({
   container: { 
     flex: 1,
   },
+  keyboardAvoidingView: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    minHeight: height,
+  },
   content: {
     flex: 1,
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     alignItems: "center",
     paddingHorizontal: 20,
     paddingVertical: 40,
   },
   logoSection: {
-    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     width: '100%',
+    marginBottom: 20,
   },
   formContainer: {
     backgroundColor: "rgba(255, 255, 255, 0.95)",

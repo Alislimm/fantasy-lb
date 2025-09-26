@@ -13,6 +13,7 @@ import MyTeamScreen from "src/screens/MyTeamScreen";
 import LeaguesScreen from "src/screens/LeaguesScreen";
 import ProfileScreen from "src/screens/ProfileScreen";
 import FixturesScreen from "src/screens/FixturesScreen";
+import TransfersScreen from "src/screens/TransfersScreen";
 import { useAuth } from "src/hooks/useAuth";
 import { useUserTeam } from "src/hooks/useUserTeam";
 
@@ -45,7 +46,7 @@ export const AppTabs = () => {
   
   // Determine if user has a team
   const hasTeam = user?.hasFantasyTeam && userTeam;
-  const teamTabName = hasTeam ? "Pick Team" : "Create Team";
+  const teamTabName = hasTeam ? "My Team" : "Create Team";
 
   return (
     <Tab.Navigator screenOptions={{ headerShown: false }}>
@@ -56,6 +57,10 @@ export const AppTabs = () => {
         options={{ title: teamTabName }}
       />
       <Tab.Screen name="Fixtures" component={FixturesScreen} />
+      {/* Only show Transfers tab if user has a team */}
+      {hasTeam && (
+        <Tab.Screen name="Transfers" component={TransfersScreen} />
+      )}
       {/* Only show Points tab if user has a team */}
       {hasTeam && (
         <Tab.Screen name="Points" component={MyTeamScreen} />

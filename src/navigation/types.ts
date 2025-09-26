@@ -5,6 +5,7 @@ export type RootStackParamList = {
   // App tabs
   Home: undefined;
   "Pick Team": undefined;
+  Transfers: undefined;
   Fixtures: undefined;
   Points: undefined;
   Leagues: undefined;
@@ -20,6 +21,7 @@ export type AuthStackParamList = {
 export type AppTabParamList = {
   Home: undefined;
   "Pick Team": undefined;
+  Transfers: undefined;
   Fixtures: undefined;
   Points: undefined;
   Leagues: undefined;

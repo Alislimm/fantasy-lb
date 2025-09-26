@@ -20,6 +20,7 @@ type AuthContextValue = {
   initializing: boolean;
   login: (token: string, user?: AuthUser | null) => Promise<void>;
   logout: () => Promise<void>;
+  updateUser: (updates: Partial<AuthUser>) => Promise<void>;
 };
 
 export const AuthContext = createContext<AuthContextValue>({
@@ -29,6 +30,8 @@ export const AuthContext = createContext<AuthContextValue>({
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   login: async (_token: string, _user?: AuthUser | null) => {},
   logout: async () => {},
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  updateUser: async (_updates: Partial<AuthUser>) => {},
 });
 
 const TOKEN_KEY = "auth_token";
@@ -67,9 +70,17 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
     setState({ token: null, user: null, initializing: false });
   }, []);
 
+  const updateUser = useCallback(async (updates: Partial<AuthUser>) => {
+    if (state.user) {
+      const updatedUser = { ...state.user, ...updates };
+      await AsyncStorage.setItem(USER_KEY, JSON.stringify(updatedUser));
+      setState((prev) => ({ ...prev, user: updatedUser }));
+    }
+  }, [state.user]);
+
   const value = useMemo<AuthContextValue>(
-    () => ({ token: state.token, user: state.user, initializing: state.initializing, login, logout }),
-    [state, login, logout]
+    () => ({ token: state.token, user: state.user, initializing: state.initializing, login, logout, updateUser }),
+    [state, login, logout, updateUser]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

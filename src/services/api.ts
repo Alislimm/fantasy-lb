@@ -4,9 +4,9 @@ import { Platform } from "react-native";
 
 // Platform-specific URLs
 const DEFAULT_BASE_URL = Platform.select({
-  ios: "http://172.31.120.119:8080",
-  android: "http://172.31.120.119:8080", 
-  default: "http://172.31.120.119:8080",
+  ios: "http://10.1.1.33:8080",
+  android: "http://10.1.1.33:8080", 
+  default: "http://10.1.1.33:8080",
 });
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL || DEFAULT_BASE_URL;
@@ -55,7 +55,7 @@ api.interceptors.request.use(async (config) => {
   );
   
   // Force the base URL to ensure it's correct
-  config.baseURL = "http://172.31.120.119:8080";
+  config.baseURL = "http://10.1.1.33:8080";
   return config;
 });
 
@@ -88,12 +88,9 @@ api.interceptors.response.use(
 
 export type LoginResponse = {
   token: string;
-  user?: {
-    id: number;
-    email: string;
-    username: string;
-    role: string;
-  };
+  userId: number;
+  username: string;
+  role: string;
 };
 
 export async function loginApi(usernameOrEmail: string, password: string) {
@@ -137,10 +134,13 @@ export type Player = {
   firstName: string;
   lastName: string;
   position: string;
-  teamId: number;
-  teamName: string;
-  price: number;
+  team: Team;
+  nationality: string;
+  marketValue: number;
   ownershipPct: number;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
 };
 
 export type PlayersQuery = {
@@ -163,10 +163,14 @@ export type User = {
 export type FantasyTeamPlayer = {
   id: number;
   player: Player;
-  isCaptain: boolean;
-  isViceCaptain: boolean;
-  isOnBench: boolean;
-  position: string;
+  purchasePrice: number;
+  active: boolean;
+  acquiredAt: string;
+  releasedAt: string | null;
+  isCaptain?: boolean;
+  isViceCaptain?: boolean;
+  isOnBench?: boolean;
+  position?: string;
 };
 
 export type FantasyTeam = {
@@ -184,6 +188,15 @@ export type FantasyTeam = {
 export type CreateTeamRequest = {
   teamName: string;
   ownerUserId: number;
+};
+
+export type InitialSquadBuildRequest = {
+  teamName: string;
+  ownerUserId: number;
+  starters: number[]; // 5 player IDs
+  bench: number[];    // 3 player IDs
+  captainPlayerId?: number; // optional, must be among starters
+  viceCaptainPlayerId?: number; // optional, must be among starters
 };
 
 // Lineup types
@@ -229,10 +242,11 @@ export async function getPlayers(params: PlayersQuery = {}) {
 export type Team = {
   id: number;
   name: string;
-  shortName?: string;
-  city?: string;
-  imageUrl?: string;
-  jerseyUrl?: string;
+  shortName: string;
+  city: string;
+  imageUrl: string;
+  jerseyUrl: string;
+  createdAt: string;
 };
 
 export async function getTeams() {
@@ -265,6 +279,18 @@ export async function createTeam(request: CreateTeamRequest): Promise<FantasyTea
   }
 }
 
+export async function buildInitialSquad(request: InitialSquadBuildRequest): Promise<FantasyTeam> {
+  console.log("[API] Building initial squad:", request);
+  try {
+    const response = await api.post<FantasyTeam>("/api/user/squad/build", request);
+    console.log("[API] Squad built:", response.data);
+    return response.data;
+  } catch (error) {
+    console.error("[API] Build squad error:", error);
+    throw error;
+  }
+}
+
 // Lineup API
 export async function createLineup(request: CreateLineupRequest): Promise<Lineup> {
   console.log("[API] Creating lineup:", request);
@@ -274,6 +300,31 @@ export async function createLineup(request: CreateLineupRequest): Promise<Lineup
     return response.data;
   } catch (error) {
     console.error("[API] Create lineup error:", error);
+    throw error;
+  }
+}
+
+// User Fantasy Team API
+export async function hasFantasyTeam(userId: number) {
+  console.log("[API] Checking if user has fantasy team:", userId);
+  try {
+    const { data } = await api.get<boolean>(`/api/user/${userId}/has-fantasy-team`);
+    console.log("[API] Has fantasy team response:", data);
+    return data;
+  } catch (error) {
+    console.error("[API] Has fantasy team error:", error);
+    throw error;
+  }
+}
+
+export async function getUserFantasyTeam(userId: number) {
+  console.log("[API] Getting user fantasy team:", userId);
+  try {
+    const { data } = await api.get<FantasyTeamPlayer[]>(`/api/user/${userId}/fantasy-team`);
+    console.log("[API] Fantasy team response:", data);
+    return data;
+  } catch (error) {
+    console.error("[API] Get fantasy team error:", error);
     throw error;
   }
 }

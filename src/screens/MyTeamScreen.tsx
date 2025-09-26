@@ -99,8 +99,8 @@ const BasketballCourt = () => (
 
 // Basketball Jersey Component - Simplified Design
 const BasketballJersey = ({ player, isStarting, isCaptain, isViceCaptain, onPlayerPress, teams }: any) => {
-  console.log(`[BasketballJersey] Player: ${player.firstName} ${player.lastName}, teamId: ${player.teamId}, teamName: "${player.teamName}"`);
-  const jerseyUrl = getTeamJerseyById(player.teamId, teams, `${player.firstName} ${player.lastName}`) || getTeamJersey(player.teamName, teams);
+  console.log(`[BasketballJersey] Player: ${player.firstName} ${player.lastName}, teamId: ${player.team.id}, teamName: "${player.team.name}"`);
+  const jerseyUrl = getTeamJerseyById(player.team.id, teams, `${player.firstName} ${player.lastName}`) || getTeamJersey(player.team.name, teams);
   
   return (
     <TouchableOpacity 
@@ -122,8 +122,8 @@ const BasketballJersey = ({ player, isStarting, isCaptain, isViceCaptain, onPlay
             source={{ uri: jerseyUrl }} 
             style={styles.teamJersey}
             resizeMode="contain"
-            onError={() => console.log(`[MyTeam] Failed to load jersey for ${player.teamName}: ${jerseyUrl}`)}
-            onLoad={() => console.log(`[MyTeam] Successfully loaded jersey for ${player.teamName}`)}
+            onError={() => console.log(`[MyTeam] Failed to load jersey for ${player.team.name}: ${jerseyUrl}`)}
+            onLoad={() => console.log(`[MyTeam] Successfully loaded jersey for ${player.team.name}`)}
           />
           <View style={styles.jerseyOverlay}>
             <Text style={styles.jerseyNumber}>{player.id}</Text>
@@ -154,8 +154,8 @@ const BasketballJersey = ({ player, isStarting, isCaptain, isViceCaptain, onPlay
       {/* Player Info Below Jersey */}
       <View style={styles.playerInfo}>
         <Text style={styles.playerName} numberOfLines={1}>{player.firstName} {player.lastName}</Text>
-        <Text style={styles.playerPrice}>${player.price}M</Text>
-        <Text style={styles.playerPoints}>{player.teamName}</Text>
+        <Text style={styles.playerPrice}>${player.marketValue}M</Text>
+        <Text style={styles.playerPoints}>{player.team.name}</Text>
       </View>
     </TouchableOpacity>
   );
@@ -193,7 +193,7 @@ const PlayerModal = ({ visible, player, isCaptain, isViceCaptain, onClose, onMak
             <View style={styles.modalStats}>
               <View style={styles.statItem}>
                 <Text style={styles.statLabel}>Price</Text>
-                <Text style={styles.statValue}>${player.price}M</Text>
+                <Text style={styles.statValue}>${player.marketValue}M</Text>
               </View>
               <View style={styles.statItem}>
                 <Text style={styles.statLabel}>Points</Text>
@@ -442,7 +442,7 @@ export default function MyTeamScreen() {
                 <View style={styles.statDivider} />
                 <View style={styles.statItem}>
                   <Text style={styles.statValue}>
-                    ${[...teamData.starting, ...teamData.bench].reduce((total, player) => total + player.price, 0).toFixed(1)}M
+                    ${[...teamData.starting, ...teamData.bench].reduce((total, player) => total + player.marketValue, 0).toFixed(1)}M
                   </Text>
                   <Text style={styles.statLabel}>Total Value</Text>
                 </View>

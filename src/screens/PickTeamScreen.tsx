@@ -6,9 +6,11 @@ import { LinearGradient } from "expo-linear-gradient";
 import { usePlayers } from "src/hooks/usePlayers";
 import { useTeams } from "src/hooks/useTeams";
 import { useCreateTeam } from "src/hooks/useCreateTeam";
-import { useCreateLineup } from "src/hooks/useCreateLineup";
+import { useBuildSquad } from "src/hooks/useBuildSquad";
 import { useUserTeam } from "src/hooks/useUserTeam";
+import { useUserFantasyTeam } from "src/hooks/useUserFantasyTeam";
 import { useAuth } from "src/hooks/useAuth";
+import { useQueryClient } from "@tanstack/react-query";
 import type { Player, Team } from "src/services/api";
 
 const { width, height } = Dimensions.get("window");
@@ -30,6 +32,18 @@ const getTeamColor = (teamName: string) => {
     'Mavericks': '#00538C',
   };
   return colors[teamName] || '#666666';
+};
+
+// Helper function to get position colors
+const getPositionColor = (position: string) => {
+  const colors: { [key: string]: string } = {
+    'PG': '#FF6B6B',
+    'SG': '#4ECDC4',
+    'SF': '#45B7D1',
+    'PF': '#96CEB4',
+    'C': '#FFEAA7',
+  };
+  return colors[position] || '#95A5A6';
 };
 
 // Helper function to get team jersey URL by teamId (more reliable)
@@ -92,45 +106,12 @@ const initialBench: TeamSlot[] = [
   { position: 'SF' },
 ];
 
-// Basketball Court Component - Same as Points screen
-const BasketballCourt = () => (
-  <View style={styles.courtLines}>
-    {/* Court outline */}
-    <View style={styles.courtOutline} />
-    
-    {/* Center circle at bottom */}
-    <View style={styles.centerCircle} />
-    
-    {/* Center line (half-court line) */}
-    <View style={styles.centerLine} />
-    
-    {/* Three-point arc */}
-    <View style={styles.threePointArc} />
-    
-    {/* Free throw circle */}
-    <View style={styles.freeThrowCircle} />
-    
-    {/* The key/paint area */}
-    <View style={styles.keyArea} />
-    
-    {/* Free throw line */}
-    <View style={styles.freeThrowLine} />
-    
-    {/* Basket and backboard */}
-    <View style={styles.backboard} />
-    <View style={styles.basket} />
-    <View style={styles.rim} />
-  </View>
-);
 
 // Empty Player Slot Component
 const EmptyPlayerSlot = ({ position, onPress }: { position: string; onPress: () => void }) => (
   <TouchableOpacity style={styles.playerContainer} onPress={onPress} activeOpacity={0.7}>
     <View style={styles.emptySlot}>
       <Text style={styles.emptySlotText}>+</Text>
-    </View>
-    <View style={styles.playerInfo}>
-      <Text style={styles.positionText}>{position}</Text>
     </View>
   </TouchableOpacity>
 );
@@ -149,8 +130,9 @@ const FilledPlayerSlot = ({
   isViceCaptain?: boolean;
   teams?: Team[];
 }) => {
-  console.log(`[FilledPlayerSlot] Player: ${player.firstName} ${player.lastName}, teamId: ${player.teamId}, teamName: "${player.teamName}"`);
-  const jerseyUrl = getTeamJerseyById(player.teamId, teams, `${player.firstName} ${player.lastName}`) || getTeamJersey(player.teamName, teams);
+  const teamName = player.team?.name || (player as any).teamName || 'Unknown Team';
+  console.log(`[FilledPlayerSlot] Player: ${player.firstName} ${player.lastName}, teamId: ${player.team?.id}, teamName: "${teamName}"`);
+  const jerseyUrl = getTeamJerseyById(player.team?.id, teams, `${player.firstName} ${player.lastName}`) || getTeamJersey(teamName, teams);
   
   return (
     <TouchableOpacity style={styles.playerContainer} onPress={onPress} activeOpacity={0.8}>
@@ -173,15 +155,15 @@ const FilledPlayerSlot = ({
             source={{ uri: jerseyUrl }} 
             style={styles.teamJersey}
             resizeMode="contain"
-            onError={() => console.log(`[PickTeam] Failed to load jersey for ${player.teamName}: ${jerseyUrl}`)}
-            onLoad={() => console.log(`[PickTeam] Successfully loaded jersey for ${player.teamName}`)}
+            onError={() => console.log(`[PickTeam] Failed to load jersey for ${teamName}: ${jerseyUrl}`)}
+            onLoad={() => console.log(`[PickTeam] Successfully loaded jersey for ${teamName}`)}
           />
           <View style={styles.jerseyOverlay}>
             <Text style={styles.jerseyNumber}>{player.id}</Text>
           </View>
         </View>
       ) : (
-        <View style={[styles.jerseyShape, { backgroundColor: getTeamColor(player.teamName) }]}>
+        <View style={[styles.jerseyShape, { backgroundColor: getTeamColor(player.team?.name || 'Unknown Team') }]}>
           <View style={styles.jerseyOutline} />
           <View style={styles.vNeck} />
           <View style={[styles.sidePanel, styles.leftPanel]} />
@@ -196,7 +178,7 @@ const FilledPlayerSlot = ({
       {/* Player Info */}
       <View style={styles.playerInfo}>
         <Text style={styles.playerName} numberOfLines={1}>{player.firstName} {player.lastName}</Text>
-        <Text style={styles.playerPrice}>${player.price}M</Text>
+        <Text style={styles.playerPrice}>${player.marketValue || (player as any).price || 0}M</Text>
       </View>
     </TouchableOpacity>
   );
@@ -255,7 +237,11 @@ const PlayerSelectionModal = ({ visible, position, onClose, onPlayerSelect, curr
               <ActivityIndicator style={styles.loading} />
             ) : (
               players?.map((player: Player) => {
-                const wouldExceedBudget = (currentTeamValue + player.price) > 100;
+                console.log(`[PlayerSelectionModal] Player: ${player.firstName} ${player.lastName}, marketValue: ${player.marketValue}, price: ${(player as any).price}`);
+                console.log(`[PlayerSelectionModal] Player team data:`, player.team);
+                console.log(`[PlayerSelectionModal] Player team name:`, player.team?.name);
+                const playerPrice = player.marketValue || (player as any).price || 0;
+                const wouldExceedBudget = (currentTeamValue + playerPrice) > 100;
                 const isAlreadySelected = getAllSelectedPlayerIds().includes(player.id);
                 const isDisabled = wouldExceedBudget || isAlreadySelected;
                 
@@ -280,13 +266,13 @@ const PlayerSelectionModal = ({ visible, position, onClose, onPlayerSelect, curr
                       styles.playerItemTeam,
                       isDisabled && styles.playerItemDisabled
                     ]}>
-                      {player.teamName}
+                      {player.team?.name || (player as any).teamName || 'Unknown Team'}
                     </Text>
                     <Text style={[
                       styles.playerItemPrice,
                       wouldExceedBudget && styles.playerItemPriceOverBudget
                     ]}>
-                      ${player.price}M
+                      ${playerPrice}M
                       {wouldExceedBudget && ' ⚠️'}
                       {isAlreadySelected && ' (Selected)'}
                     </Text>
@@ -322,8 +308,9 @@ const PlayerModal = ({
     return null;
   }
 
-  console.log(`[PlayerModal] Player: ${player.firstName} ${player.lastName}, teamId: ${player.teamId}, teamName: "${player.teamName}"`);
-  const jerseyUrl = getTeamJerseyById(player.teamId, teams, `${player.firstName} ${player.lastName}`) || getTeamJersey(player.teamName, teams);
+  const teamName = player.team?.name || (player as any).teamName || 'Unknown Team';
+  console.log(`[PlayerModal] Player: ${player.firstName} ${player.lastName}, teamId: ${player.team?.id || 0}, teamName: "${teamName}"`);
+  const jerseyUrl = getTeamJerseyById(player.team?.id || 0, teams, `${player.firstName} ${player.lastName}`) || getTeamJersey(teamName, teams);
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
@@ -337,15 +324,15 @@ const PlayerModal = ({
                   source={{ uri: jerseyUrl }} 
                   style={styles.teamJersey}
                   resizeMode="contain"
-                  onError={() => console.log(`[PlayerModal] Failed to load jersey for ${player.teamName}: ${jerseyUrl}`)}
-                  onLoad={() => console.log(`[PlayerModal] Successfully loaded jersey for ${player.teamName}`)}
+                  onError={() => console.log(`[PlayerModal] Failed to load jersey for ${teamName}: ${jerseyUrl}`)}
+                  onLoad={() => console.log(`[PlayerModal] Successfully loaded jersey for ${teamName}`)}
                 />
                 <View style={styles.jerseyOverlay}>
                   <Text style={styles.jerseyNumber}>{player.id}</Text>
                 </View>
               </View>
             ) : (
-              <View style={[styles.jerseyShape, { backgroundColor: getTeamColor(player.teamName) }]}>
+              <View style={[styles.jerseyShape, { backgroundColor: getTeamColor(teamName) }]}>
                 <View style={styles.jerseyOutline} />
                 <View style={styles.vNeck} />
                 <View style={[styles.sidePanel, styles.leftPanel]} />
@@ -358,8 +345,8 @@ const PlayerModal = ({
             )}
             <View style={styles.playerModalInfo}>
               <Text style={styles.playerModalName}>{player.firstName} {player.lastName}</Text>
-              <Text style={styles.playerModalTeam}>{player.teamName}</Text>
-              <Text style={styles.playerModalPrice}>${player.price}M</Text>
+              <Text style={styles.playerModalTeam}>{teamName}</Text>
+              <Text style={styles.playerModalPrice}>${player.marketValue || (player as any).price || 0}M</Text>
             </View>
           </View>
 
@@ -371,11 +358,11 @@ const PlayerModal = ({
             </View>
             <View style={styles.statRow}>
               <Text style={styles.statLabel}>Team:</Text>
-              <Text style={styles.statValue}>{player.teamName}</Text>
+              <Text style={styles.statValue}>{teamName}</Text>
             </View>
             <View style={styles.statRow}>
               <Text style={styles.statLabel}>Price:</Text>
-              <Text style={styles.statValue}>${player.price}M</Text>
+              <Text style={styles.statValue}>${player.marketValue || (player as any).price || 0}M</Text>
             </View>
             <View style={styles.statRow}>
               <Text style={styles.statLabel}>Ownership:</Text>
@@ -464,6 +451,58 @@ const RemovePlayerModal = ({ visible, player, onClose, onRemove }: any) => {
   );
 };
 
+// Player Info Modal Component
+const PlayerInfoModal = ({ 
+  visible, 
+  onClose, 
+  player 
+}: {
+  visible: boolean;
+  onClose: () => void;
+  player: Player | null;
+}) => {
+  if (!player) return null;
+
+  const teamColor = getTeamColor(player.team?.name || (player as any).teamName || 'Unknown Team');
+  const positionColor = getPositionColor(player.position);
+
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <View style={styles.modalOverlay}>
+        <View style={styles.playerInfoModal}>
+          {/* Player Header */}
+          <View style={styles.playerInfoHeader}>
+            <Text style={styles.playerInfoName}>{player.firstName} {player.lastName}</Text>
+            <Text style={[styles.playerInfoPosition, { backgroundColor: positionColor }]}>
+              {player.position}
+            </Text>
+          </View>
+          
+          {/* Player Details */}
+          <View style={styles.playerInfoDetails}>
+            <View style={styles.playerInfoRow}>
+              <Text style={styles.playerInfoLabel}>Team:</Text>
+              <Text style={[styles.playerInfoValue, { color: teamColor }]}>{player.team?.name || (player as any).teamName || 'Unknown Team'}</Text>
+            </View>
+            <View style={styles.playerInfoRow}>
+              <Text style={styles.playerInfoLabel}>Price:</Text>
+              <Text style={styles.playerInfoValue}>${player.marketValue || (player as any).price || 0}M</Text>
+            </View>
+            <View style={styles.playerInfoRow}>
+              <Text style={styles.playerInfoLabel}>Ownership:</Text>
+              <Text style={styles.playerInfoValue}>{player.ownershipPct}%</Text>
+            </View>
+          </View>
+          
+          <TouchableOpacity style={styles.closeInfoButton} onPress={onClose}>
+            <Text style={styles.closeInfoButtonText}>Close</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
+};
+
 export default function PickTeamScreen() {
   const insets = useSafeAreaInsets();
   const [startingTeam, setStartingTeam] = useState<TeamSlot[]>(initialTeam);
@@ -478,19 +517,41 @@ export default function PickTeamScreen() {
   const [captainId, setCaptainId] = useState<number | null>(null);
   const [viceCaptainId, setViceCaptainId] = useState<number | null>(null);
   const [captainModalVisible, setCaptainModalVisible] = useState(false);
+  const [playerInfoModalVisible, setPlayerInfoModalVisible] = useState(false);
+  const [selectedPlayerForInfo, setSelectedPlayerForInfo] = useState<Player | null>(null);
   
   // Auth and user team hooks
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
   const { data: userTeam, isLoading: userTeamLoading } = useUserTeam();
+  const { data: fantasyTeam, isLoading: fantasyTeamLoading } = useUserFantasyTeam();
+  const queryClient = useQueryClient();
   
   // API hooks
   const createTeamMutation = useCreateTeam();
-  const createLineupMutation = useCreateLineup();
+  const buildSquadMutation = useBuildSquad();
   const { data: teams } = useTeams();
 
+  // Debug logging
+  console.log('[PickTeamScreen] fantasyTeam:', fantasyTeam);
+  console.log('[PickTeamScreen] fantasyTeam type:', typeof fantasyTeam);
+  console.log('[PickTeamScreen] isArray:', Array.isArray(fantasyTeam));
+  console.log('[PickTeamScreen] length:', Array.isArray(fantasyTeam) ? fantasyTeam.length : 'N/A');
+  console.log('[PickTeamScreen] userTeamLoading:', userTeamLoading);
+  console.log('[PickTeamScreen] fantasyTeamLoading:', fantasyTeamLoading);
+  
   // Determine if user needs to create a team or is modifying their existing team
-  const needsToCreateTeam = !user?.hasFantasyTeam || !userTeam;
-  const isLoading = userTeamLoading;
+  const hasTeamData = fantasyTeam && Array.isArray(fantasyTeam) && fantasyTeam.length > 0;
+  const needsToCreateTeam = !hasTeamData;
+  const isLoading = userTeamLoading || fantasyTeamLoading;
+  
+  // If user has a fantasy team (from hasFantasyTeam API), show team display
+  const shouldShowTeamDisplay = user?.hasFantasyTeam && hasTeamData;
+  
+  // Calculate team value for existing team
+  const getExistingTeamValue = () => {
+    if (!fantasyTeam || !Array.isArray(fantasyTeam)) return 0;
+    return fantasyTeam.reduce((total: number, squadPlayer: any) => total + (squadPlayer.player.marketValue || squadPlayer.player.price || 0), 0);
+  };
 
   // Calculate total team value
   const getAllPlayers = () => {
@@ -499,7 +560,7 @@ export default function PickTeamScreen() {
     return [...startingPlayers, ...benchPlayers];
   };
 
-  const totalTeamValue = getAllPlayers().reduce((total, player) => total + player.price, 0);
+  const totalTeamValue = getAllPlayers().reduce((total, player) => total + (player.marketValue || (player as any).price || 0), 0);
 
   const handleEmptySlotPress = (index: number, position: string, isBench: boolean = false) => {
     setSelectedSlotIndex(index);
@@ -511,6 +572,11 @@ export default function PickTeamScreen() {
   const handlePlayerPress = (player: Player) => {
     setSelectedPlayer(player);
     setCaptainModalVisible(true);
+  };
+
+  const handlePlayerInfoPress = (player: Player) => {
+    setSelectedPlayerForInfo(player);
+    setPlayerInfoModalVisible(true);
   };
 
   const handleCaptainSelect = (playerId: number) => {
@@ -602,10 +668,10 @@ export default function PickTeamScreen() {
       return;
     }
     
-    if (getAllPlayers().length < 8) {
-      Alert.alert('Incomplete Team', 'Please select all 8 players (5 starting + 3 bench).');
-      return;
-    }
+     if (getAllPlayers().length < 8) {
+       Alert.alert('Incomplete Team', 'Please select all 8 players (5 starting + 3 bench).');
+       return;
+     }
     
     if (!teamName.trim()) {
       Alert.alert('Team Name Required', 'Please enter a name for your team.');
@@ -623,37 +689,40 @@ export default function PickTeamScreen() {
     }
     
     try {
-      // For now, using a mock user ID (1). 
-      // In a real app, this would come from authentication context
-      const mockUserId = 1;
+      if (!user?.id) {
+        Alert.alert('Error', 'User not logged in. Please log in again.');
+        return;
+      }
+      
       const gameWeekId = 1; // Use gameweek ID 1 as requested
       
-      // Create the team first
-      const teamResult = await createTeamMutation.mutateAsync({
-        teamName: teamName.trim(),
-        ownerUserId: mockUserId,
-      });
-      
-      // Prepare lineup data
+      // Prepare squad data
       const startingPlayers = startingTeam.filter(slot => slot.player).map(slot => slot.player!.id);
       const benchPlayers = benchTeam.filter(slot => slot.player).map(slot => slot.player!.id);
       
-      // Create the lineup
-      const lineupResult = await createLineupMutation.mutateAsync({
-        fantasyTeamId: teamResult.id,
-        gameWeekId: gameWeekId,
+      // Build the initial squad (this creates the team and squad in one call)
+      const squadResult = await buildSquadMutation.mutateAsync({
+        teamName: teamName.trim(),
+        ownerUserId: user.id,
         starters: startingPlayers,
         bench: benchPlayers,
         captainPlayerId: captainId || undefined,
+        viceCaptainPlayerId: viceCaptainId || undefined,
       });
       
       Alert.alert(
-        'Team & Lineup Created Successfully!', 
-        `Your team "${teamResult.teamName}" and lineup have been created!\n\nTeam ID: ${teamResult.id}\nLineup ID: ${lineupResult.id}`,
+        'Congratulations!', 
+        `Your team "${squadResult.teamName}" has been created successfully!`,
         [
           {
             text: 'OK',
-            onPress: () => {
+            onPress: async () => {
+              // Update user to mark that they now have a fantasy team
+              await updateUser({ hasFantasyTeam: true });
+              
+              // Invalidate and refetch user team data
+              await queryClient.invalidateQueries({ queryKey: ['userTeam'] });
+              
               // Reset the form
               setStartingTeam(initialTeam);
               setBenchTeam(initialBench);
@@ -661,9 +730,7 @@ export default function PickTeamScreen() {
               setCaptainId(null);
               setViceCaptainId(null);
               
-              // Force refresh of user data and navigation
-              // The navigation will automatically update when user.hasFantasyTeam changes
-              console.log('[PickTeam] Team created successfully, navigation should refresh');
+              console.log('[PickTeam] Team created successfully, user updated and queries invalidated');
             }
           }
         ]
@@ -687,12 +754,166 @@ export default function PickTeamScreen() {
     );
   }
 
+  // Render existing team view when user has a fantasy team
+  if (shouldShowTeamDisplay) {
+    // Ensure we have exactly 5 starters and 3 bench players
+    const allPlayers = fantasyTeam || [];
+    const startingPlayers = allPlayers.slice(0, 5); // First 5 players are starters
+    const benchPlayers = allPlayers.slice(5, 8); // Next 3 players are bench
+    const teamValue = getExistingTeamValue();
+    
+    console.log('[PickTeamScreen] Starting players:', startingPlayers.length);
+    console.log('[PickTeamScreen] Bench players:', benchPlayers.length);
+
+    return (
+      <LinearGradient
+        colors={['#CE1126', '#FFFFFF', '#00A651']}
+        locations={[0, 0.5, 1]}
+        style={[styles.container, { paddingTop: insets.top }]}
+      >
+        <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+          {/* Header */}
+          <View style={styles.header}>
+            <Text style={styles.title}>My Team</Text>
+            <Text style={styles.teamName}>My Fantasy Team</Text>
+            <View style={styles.teamStats}>
+              <View style={styles.statItem}>
+                <Text style={styles.statValue}>0</Text>
+                <Text style={styles.statLabel}>Points</Text>
+              </View>
+              <View style={styles.statItem}>
+                <Text style={styles.statValue}>${teamValue.toFixed(1)}M</Text>
+                <Text style={styles.statLabel}>Team Value</Text>
+              </View>
+              <View style={styles.statItem}>
+                <Text style={styles.statValue}>3</Text>
+                <Text style={styles.statLabel}>Transfers</Text>
+              </View>
+            </View>
+          </View>
+
+          {/* Basketball Court */}
+          <View style={styles.courtContainer}>
+            <Image 
+              source={require('../../assets/images/basketball-court.jpeg')} 
+              style={styles.court}
+              resizeMode="cover"
+            />
+            
+            {/* Starting 5 Players - Basketball Formation */}
+            <View style={styles.formationContainer}>
+              {/* Guards (Bottom) */}
+              <View style={styles.guardsRow}>
+                {startingPlayers[0] && (
+                  <FilledPlayerSlot
+                    player={startingPlayers[0].player || startingPlayers[0]}
+                    onPress={() => handlePlayerInfoPress(startingPlayers[0].player || startingPlayers[0])}
+                    isCaptain={startingPlayers[0].isCaptain}
+                    isViceCaptain={startingPlayers[0].isViceCaptain}
+                    teams={teams}
+                  />
+                )}
+                {startingPlayers[1] && (
+                  <FilledPlayerSlot
+                    player={startingPlayers[1].player || startingPlayers[1]}
+                    onPress={() => handlePlayerInfoPress(startingPlayers[1].player || startingPlayers[1])}
+                    isCaptain={startingPlayers[1].isCaptain}
+                    isViceCaptain={startingPlayers[1].isViceCaptain}
+                    teams={teams}
+                  />
+                )}
+              </View>
+              
+              {/* Forwards (Middle) */}
+              <View style={styles.forwardsRow}>
+                {startingPlayers[2] && (
+                  <FilledPlayerSlot
+                    player={startingPlayers[2].player || startingPlayers[2]}
+                    onPress={() => handlePlayerInfoPress(startingPlayers[2].player || startingPlayers[2])}
+                    isCaptain={startingPlayers[2].isCaptain}
+                    isViceCaptain={startingPlayers[2].isViceCaptain}
+                    teams={teams}
+                  />
+                )}
+                {startingPlayers[3] && (
+                  <FilledPlayerSlot
+                    player={startingPlayers[3].player || startingPlayers[3]}
+                    onPress={() => handlePlayerInfoPress(startingPlayers[3].player || startingPlayers[3])}
+                    isCaptain={startingPlayers[3].isCaptain}
+                    isViceCaptain={startingPlayers[3].isViceCaptain}
+                    teams={teams}
+                  />
+                )}
+              </View>
+              
+              {/* Center (Top) */}
+              <View style={styles.centerRow}>
+                {startingPlayers[4] && (
+                  <FilledPlayerSlot
+                    player={startingPlayers[4].player || startingPlayers[4]}
+                    onPress={() => handlePlayerInfoPress(startingPlayers[4].player || startingPlayers[4])}
+                    isCaptain={startingPlayers[4].isCaptain}
+                    isViceCaptain={startingPlayers[4].isViceCaptain}
+                    teams={teams}
+                  />
+                )}
+              </View>
+            </View>
+          </View>
+
+          {/* Bench */}
+          <View style={styles.benchSection}>
+            <Text style={styles.benchTitle}>Bench</Text>
+            <View style={styles.benchContainer}>
+              {benchPlayers.map((squadPlayer: any, index: number) => (
+                <FilledPlayerSlot
+                  key={`bench-${index}`}
+                  player={squadPlayer.player || squadPlayer}
+                  onPress={() => handlePlayerInfoPress(squadPlayer.player || squadPlayer)}
+                  isCaptain={squadPlayer.isCaptain}
+                  isViceCaptain={squadPlayer.isViceCaptain}
+                  teams={teams}
+                />
+              ))}
+            </View>
+          </View>
+        </ScrollView>
+
+        {/* Player Info Modal */}
+        <PlayerInfoModal
+          visible={playerInfoModalVisible}
+          onClose={() => setPlayerInfoModalVisible(false)}
+          player={selectedPlayerForInfo}
+        />
+      </LinearGradient>
+    );
+  }
+
+  // Fallback for when user has a team but data is not available yet
+  if (!needsToCreateTeam && !hasTeamData && !isLoading) {
+    return (
+      <View style={[styles.container, { paddingTop: insets.top, justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color="#D2691E" />
+        <Text style={styles.loadingText}>Loading your team data...</Text>
+      </View>
+    );
+  }
+
   return (
     <KeyboardAvoidingView 
       style={[styles.container, { paddingTop: insets.top }]}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
     >
+      {/* Basketball Court Background */}
+      <Image 
+        source={require('../../assets/images/basketball-court.jpeg')} 
+        style={styles.backgroundImage}
+        resizeMode="cover"
+        onError={(error) => console.log('Background court image failed to load:', error)}
+        onLoad={() => console.log('Background court image loaded successfully')}
+      />
+      
       <ScrollView 
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
@@ -713,13 +934,13 @@ export default function PickTeamScreen() {
 
         {/* Basketball Court */}
         <View style={styles.courtContainer}>
-          <LinearGradient
-            colors={['#D2691E', '#B8441F', '#8B0000']}
+          <Image 
+            source={require('../../assets/images/basketball-court.jpeg')} 
             style={styles.court}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-          >
-            <BasketballCourt />
+            resizeMode="cover"
+            onError={(error) => console.log('Basketball court image failed to load:', error)}
+            onLoad={() => console.log('Basketball court image loaded successfully')}
+          />
 
             {/* Starting 5 Players - Basketball Formation */}
             <View style={styles.formationContainer}>
@@ -805,7 +1026,6 @@ export default function PickTeamScreen() {
                 )}
               </View>
             </View>
-          </LinearGradient>
         </View>
 
         {/* Bench Players */}
@@ -883,13 +1103,13 @@ export default function PickTeamScreen() {
             
             {/* Player Count Display */}
             <View style={styles.playerCountDisplay}>
-              <Text style={[
-                styles.playerCountValue,
-                getAllPlayers().length === 8 && styles.playerCountComplete
-              ]}>
-                {getAllPlayers().length}
-              </Text>
-              <Text style={styles.playerCountLimit}> / 8 players</Text>
+                <Text style={[
+                  styles.playerCountValue,
+                 getAllPlayers().length === 8 && styles.playerCountComplete
+                ]}>
+                  {getAllPlayers().length}
+                </Text>
+               <Text style={styles.playerCountLimit}> / 8 players</Text>
             </View>
             {totalTeamValue > 100 && (
               <Text style={styles.budgetWarning}>
@@ -904,12 +1124,13 @@ export default function PickTeamScreen() {
             disabled={(() => {
               const playerCount = getAllPlayers().length;
               const hasTeamName = teamName.trim();
-              const isDisabled = totalTeamValue > 100 || 
-                playerCount !== 8 || 
-                !hasTeamName ||
-                !captainId ||
+                const isDisabled = totalTeamValue > 100 || 
+                 playerCount !== 8 || 
+                 !hasTeamName ||
+                 !captainId ||
                 !viceCaptainId ||
-                createTeamMutation.isPending;
+                buildSquadMutation.isPending ||
+                false;
               
               console.log("🔍 [DEBUG] Button disabled check:", {
                 totalTeamValue,
@@ -923,11 +1144,11 @@ export default function PickTeamScreen() {
               
               return isDisabled;
             })()}
-            loading={createTeamMutation.isPending}
-            style={[
-              styles.saveButton,
-              (totalTeamValue > 100 || getAllPlayers().length !== 8 || !teamName.trim() || !captainId || !viceCaptainId) && styles.saveButtonDisabled
-            ]}
+            loading={buildSquadMutation.isPending}
+              style={[
+                styles.saveButton,
+               (totalTeamValue > 100 || getAllPlayers().length !== 8 || !teamName.trim() || !captainId || !viceCaptainId) && styles.saveButtonDisabled
+              ]}
             buttonColor={
               totalTeamValue > 100 ? '#E53E3E' : 
               !teamName.trim() ? '#9CA3AF' :
@@ -935,19 +1156,21 @@ export default function PickTeamScreen() {
               '#22C55E'
             }
           >
-            {createTeamMutation.isPending
-              ? 'Creating Team...'
-              : totalTeamValue > 100 
-                ? 'Budget Exceeded' 
-                : getAllPlayers().length !== 8 
-                  ? `Select ${8 - getAllPlayers().length} More Players`
-                  : !teamName.trim()
-                    ? 'Enter Team Name'
-                    : !captainId
-                      ? 'Select Captain'
-                      : !viceCaptainId
-                        ? 'Select Vice-Captain'
-                        : 'Create Team'
+            {buildSquadMutation.isPending
+              ? 'Building Squad...'
+              : false
+                ? 'Creating Lineup...'
+                  : totalTeamValue > 100 
+                    ? 'Budget Exceeded' 
+                   : getAllPlayers().length !== 8 
+                     ? `Select ${8 - getAllPlayers().length} More Players`
+                    : !teamName.trim()
+                      ? 'Enter Team Name'
+                      : !captainId
+                        ? 'Select Captain'
+                        : !viceCaptainId
+                          ? 'Select Vice-Captain'
+                          : 'Create Team'
             }
           </Button>
         </View>
@@ -992,7 +1215,17 @@ export default function PickTeamScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0F0F0F',
+    backgroundColor: '#FF8C00', // Basketball orange background
+  },
+  backgroundImage: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    width: '100%',
+    height: '100%',
+    opacity: 0.3, // Semi-transparent overlay
   },
   scrollContent: {
     paddingBottom: 150, // Increased padding to account for keyboard and bench player names
@@ -1000,7 +1233,16 @@ const styles = StyleSheet.create({
   header: {
     padding: 20,
     alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(255, 140, 0, 0.85)', // Basketball orange with transparency
+    borderRadius: 20,
+    margin: 16,
+    borderWidth: 2,
+    borderColor: '#FFD700', // Gold border
+    elevation: 6,
+    shadowColor: '#8B0000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
   },
   title: {
     color: '#D2691E',
@@ -1025,10 +1267,11 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.6,
     shadowRadius: 15,
-    borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderWidth: 4,
+    borderColor: '#FFD700', // Gold border for basketball court
   },
   court: {
+    width: '100%',
     height: height * 0.55,
     position: 'relative',
   },
@@ -1269,7 +1512,7 @@ const styles = StyleSheet.create({
     borderRadius: 2,
   },
   playerInfo: {
-    marginTop: 8,
+    marginTop: -5,
     alignItems: 'center',
     backgroundColor: 'rgba(255,255,255,0.95)',
     borderRadius: 12,
@@ -1299,11 +1542,18 @@ const styles = StyleSheet.create({
   benchSection: {
     padding: 20,
     paddingBottom: 30, // Extra bottom padding for player names
-    backgroundColor: 'rgba(0,0,0,0.3)',
+    backgroundColor: 'rgba(255, 140, 0, 0.9)', // Basketball orange with high opacity
     marginHorizontal: 16,
     borderRadius: 20,
     marginTop: 16,
     marginBottom: 30, // Extra bottom margin for better spacing
+    borderWidth: 3,
+    borderColor: '#FFD700', // Gold border for basketball court feel
+    elevation: 8,
+    shadowColor: '#8B0000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
   },
   benchTitle: {
     color: '#D2691E',
@@ -1318,6 +1568,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-around',
     alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 10,
   },
   // Modal Styles
   modalOverlay: {
@@ -1415,11 +1667,18 @@ const styles = StyleSheet.create({
   // Team Management Styles
   teamManagement: {
     padding: 20,
-    backgroundColor: 'rgba(0,0,0,0.3)',
+    backgroundColor: 'rgba(255, 140, 0, 0.9)', // Basketball orange with high opacity
     marginHorizontal: 16,
     borderRadius: 20,
     marginTop: 16,
     marginBottom: 40, // Added bottom margin for better spacing
+    borderWidth: 3,
+    borderColor: '#FFD700', // Gold border
+    elevation: 8,
+    shadowColor: '#8B0000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
   },
   teamNameSection: {
     marginBottom: 20,
@@ -1671,5 +1930,94 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     width: '100%',
     height: '100%',
+  },
+  // Existing team view styles
+  scrollView: {
+    flex: 1,
+  },
+  teamName: {
+    fontSize: 20,
+    color: '#FFFFFF',
+    marginTop: 5,
+    textAlign: 'center',
+  },
+  teamStats: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginTop: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 15,
+    padding: 15,
+    width: '100%',
+  },
+  statItem: {
+    alignItems: 'center',
+  },
+  benchContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  // Player Info Modal styles
+  playerInfoModal: {
+    backgroundColor: 'white',
+    borderRadius: 20,
+    padding: 20,
+    width: '85%',
+    elevation: 10,
+    alignItems: 'center',
+  },
+  playerInfoHeader: {
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  playerInfoName: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 10,
+  },
+  playerInfoPosition: {
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+  },
+  playerInfoDetails: {
+    width: '100%',
+    marginBottom: 20,
+  },
+  playerInfoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  playerInfoLabel: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#666',
+  },
+  playerInfoValue: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  closeInfoButton: {
+    backgroundColor: '#f44336',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  closeInfoButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });
