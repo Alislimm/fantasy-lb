@@ -4,9 +4,9 @@ import { Platform } from "react-native";
 
 // Platform-specific URLs
 const DEFAULT_BASE_URL = Platform.select({
-  ios: "http://10.1.1.33:8080",
-  android: "http://10.1.1.33:8080", 
-  default: "http://10.1.1.33:8080",
+  ios: "http://192.168.1.53:8080",
+  android: "http://192.168.1.53:8080", 
+  default: "http://192.168.1.53:8080",
 });
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL || DEFAULT_BASE_URL;
@@ -55,7 +55,7 @@ api.interceptors.request.use(async (config) => {
   );
   
   // Force the base URL to ensure it's correct
-  config.baseURL = "http://10.1.1.33:8080";
+  config.baseURL = "http://192.168.1.53:8080";
   return config;
 });
 
