@@ -320,7 +320,7 @@ export async function hasFantasyTeam(userId: number) {
 export async function getUserFantasyTeam(userId: number) {
   console.log("[API] Getting user fantasy team:", userId);
   try {
-    const { data } = await api.get<FantasyTeamPlayer[]>(`/api/user/${userId}/fantasy-team`);
+    const { data } = await api.get<FantasyTeam>(`/api/user/${userId}/fantasy-team`);
     console.log("[API] Fantasy team response:", data);
     return data;
   } catch (error) {

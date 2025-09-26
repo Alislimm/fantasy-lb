@@ -28,7 +28,7 @@ export const useUserTeam = () => {
       
       try {
         console.log(`[UserTeam] Fetching team for user ${user.id}`);
-        const response = await api.get(`/api/users/${user.id}/team`);
+        const response = await api.get(`/api/user/${user.id}/fantasy-team`);
         console.log('[UserTeam] Team response:', response.data);
         return response.data;
       } catch (error: any) {

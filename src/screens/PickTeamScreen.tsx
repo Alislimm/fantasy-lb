@@ -534,13 +534,12 @@ export default function PickTeamScreen() {
   // Debug logging
   console.log('[PickTeamScreen] fantasyTeam:', fantasyTeam);
   console.log('[PickTeamScreen] fantasyTeam type:', typeof fantasyTeam);
-  console.log('[PickTeamScreen] isArray:', Array.isArray(fantasyTeam));
-  console.log('[PickTeamScreen] length:', Array.isArray(fantasyTeam) ? fantasyTeam.length : 'N/A');
+  console.log('[PickTeamScreen] squad length:', fantasyTeam?.squad?.length || 0);
   console.log('[PickTeamScreen] userTeamLoading:', userTeamLoading);
   console.log('[PickTeamScreen] fantasyTeamLoading:', fantasyTeamLoading);
   
   // Determine if user needs to create a team or is modifying their existing team
-  const hasTeamData = fantasyTeam && Array.isArray(fantasyTeam) && fantasyTeam.length > 0;
+  const hasTeamData = fantasyTeam && fantasyTeam.squad && fantasyTeam.squad.length > 0;
   const needsToCreateTeam = !hasTeamData;
   const isLoading = userTeamLoading || fantasyTeamLoading;
   
@@ -549,8 +548,8 @@ export default function PickTeamScreen() {
   
   // Calculate team value for existing team
   const getExistingTeamValue = () => {
-    if (!fantasyTeam || !Array.isArray(fantasyTeam)) return 0;
-    return fantasyTeam.reduce((total: number, squadPlayer: any) => total + (squadPlayer.player.marketValue || squadPlayer.player.price || 0), 0);
+    if (!fantasyTeam || !fantasyTeam.squad) return 0;
+    return fantasyTeam.squad.reduce((total: number, squadPlayer: any) => total + (squadPlayer.player.marketValue || squadPlayer.player.price || 0), 0);
   };
 
   // Calculate total team value
@@ -756,12 +755,16 @@ export default function PickTeamScreen() {
 
   // Render existing team view when user has a fantasy team
   if (shouldShowTeamDisplay) {
-    // Ensure we have exactly 5 starters and 3 bench players
-    const allPlayers = fantasyTeam || [];
-    const startingPlayers = allPlayers.slice(0, 5); // First 5 players are starters
-    const benchPlayers = allPlayers.slice(5, 8); // Next 3 players are bench
+    // Get squad players and organize them by position
+    const squadPlayers = fantasyTeam?.squad || [];
     const teamValue = getExistingTeamValue();
     
+    // For now, let's assume first 5 are starters and next 3 are bench
+    // In a real app, you'd have position-specific logic
+    const startingPlayers = squadPlayers.slice(0, 5);
+    const benchPlayers = squadPlayers.slice(5, 8);
+    
+    console.log('[PickTeamScreen] Squad players:', squadPlayers.length);
     console.log('[PickTeamScreen] Starting players:', startingPlayers.length);
     console.log('[PickTeamScreen] Bench players:', benchPlayers.length);
 
@@ -773,24 +776,24 @@ export default function PickTeamScreen() {
       >
         <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
           {/* Header */}
-          <View style={styles.header}>
-            <Text style={styles.title}>My Team</Text>
-            <Text style={styles.teamName}>My Fantasy Team</Text>
-            <View style={styles.teamStats}>
-              <View style={styles.statItem}>
-                <Text style={styles.statValue}>0</Text>
-                <Text style={styles.statLabel}>Points</Text>
-              </View>
-              <View style={styles.statItem}>
-                <Text style={styles.statValue}>${teamValue.toFixed(1)}M</Text>
-                <Text style={styles.statLabel}>Team Value</Text>
-              </View>
-              <View style={styles.statItem}>
-                <Text style={styles.statValue}>3</Text>
-                <Text style={styles.statLabel}>Transfers</Text>
+            <View style={styles.header}>
+              <Text style={styles.title}>My Team</Text>
+              <Text style={styles.teamName}>{fantasyTeam?.teamName || 'My Fantasy Team'}</Text>
+              <View style={styles.teamStats}>
+                <View style={styles.statItem}>
+                  <Text style={styles.statValue}>{fantasyTeam?.totalPoints || 0}</Text>
+                  <Text style={styles.statLabel}>Points</Text>
+                </View>
+                <View style={styles.statItem}>
+                  <Text style={styles.statValue}>${teamValue.toFixed(1)}M</Text>
+                  <Text style={styles.statLabel}>Team Value</Text>
+                </View>
+                <View style={styles.statItem}>
+                  <Text style={styles.statValue}>{fantasyTeam?.transfersRemaining || 0}</Text>
+                  <Text style={styles.statLabel}>Transfers</Text>
+                </View>
               </View>
             </View>
-          </View>
 
           {/* Basketball Court */}
           <View style={styles.courtContainer}>
@@ -804,21 +807,21 @@ export default function PickTeamScreen() {
             <View style={styles.formationContainer}>
               {/* Guards (Bottom) */}
               <View style={styles.guardsRow}>
-                {startingPlayers[0] && (
-                  <FilledPlayerSlot
-                    player={startingPlayers[0].player || startingPlayers[0]}
-                    onPress={() => handlePlayerInfoPress(startingPlayers[0].player || startingPlayers[0])}
-                    isCaptain={startingPlayers[0].isCaptain}
-                    isViceCaptain={startingPlayers[0].isViceCaptain}
-                    teams={teams}
-                  />
-                )}
+                  {startingPlayers[0] && (
+                    <FilledPlayerSlot
+                      player={startingPlayers[0].player}
+                      onPress={() => handlePlayerInfoPress(startingPlayers[0].player)}
+                      isCaptain={false} // You can add captain logic later
+                      isViceCaptain={false} // You can add vice-captain logic later
+                      teams={teams}
+                    />
+                  )}
                 {startingPlayers[1] && (
                   <FilledPlayerSlot
-                    player={startingPlayers[1].player || startingPlayers[1]}
-                    onPress={() => handlePlayerInfoPress(startingPlayers[1].player || startingPlayers[1])}
-                    isCaptain={startingPlayers[1].isCaptain}
-                    isViceCaptain={startingPlayers[1].isViceCaptain}
+                    player={startingPlayers[1].player}
+                    onPress={() => handlePlayerInfoPress(startingPlayers[1].player)}
+                    isCaptain={false}
+                    isViceCaptain={false}
                     teams={teams}
                   />
                 )}
@@ -828,19 +831,19 @@ export default function PickTeamScreen() {
               <View style={styles.forwardsRow}>
                 {startingPlayers[2] && (
                   <FilledPlayerSlot
-                    player={startingPlayers[2].player || startingPlayers[2]}
-                    onPress={() => handlePlayerInfoPress(startingPlayers[2].player || startingPlayers[2])}
-                    isCaptain={startingPlayers[2].isCaptain}
-                    isViceCaptain={startingPlayers[2].isViceCaptain}
+                    player={startingPlayers[2].player}
+                    onPress={() => handlePlayerInfoPress(startingPlayers[2].player)}
+                    isCaptain={false}
+                    isViceCaptain={false}
                     teams={teams}
                   />
                 )}
                 {startingPlayers[3] && (
                   <FilledPlayerSlot
-                    player={startingPlayers[3].player || startingPlayers[3]}
-                    onPress={() => handlePlayerInfoPress(startingPlayers[3].player || startingPlayers[3])}
-                    isCaptain={startingPlayers[3].isCaptain}
-                    isViceCaptain={startingPlayers[3].isViceCaptain}
+                    player={startingPlayers[3].player}
+                    onPress={() => handlePlayerInfoPress(startingPlayers[3].player)}
+                    isCaptain={false}
+                    isViceCaptain={false}
                     teams={teams}
                   />
                 )}
@@ -850,10 +853,10 @@ export default function PickTeamScreen() {
               <View style={styles.centerRow}>
                 {startingPlayers[4] && (
                   <FilledPlayerSlot
-                    player={startingPlayers[4].player || startingPlayers[4]}
-                    onPress={() => handlePlayerInfoPress(startingPlayers[4].player || startingPlayers[4])}
-                    isCaptain={startingPlayers[4].isCaptain}
-                    isViceCaptain={startingPlayers[4].isViceCaptain}
+                    player={startingPlayers[4].player}
+                    onPress={() => handlePlayerInfoPress(startingPlayers[4].player)}
+                    isCaptain={false}
+                    isViceCaptain={false}
                     teams={teams}
                   />
                 )}
@@ -865,16 +868,16 @@ export default function PickTeamScreen() {
           <View style={styles.benchSection}>
             <Text style={styles.benchTitle}>Bench</Text>
             <View style={styles.benchContainer}>
-              {benchPlayers.map((squadPlayer: any, index: number) => (
-                <FilledPlayerSlot
-                  key={`bench-${index}`}
-                  player={squadPlayer.player || squadPlayer}
-                  onPress={() => handlePlayerInfoPress(squadPlayer.player || squadPlayer)}
-                  isCaptain={squadPlayer.isCaptain}
-                  isViceCaptain={squadPlayer.isViceCaptain}
-                  teams={teams}
-                />
-              ))}
+               {benchPlayers.map((squadPlayer: any, index: number) => (
+                 <FilledPlayerSlot
+                   key={`bench-${index}`}
+                   player={squadPlayer.player}
+                   onPress={() => handlePlayerInfoPress(squadPlayer.player)}
+                   isCaptain={false}
+                   isViceCaptain={false}
+                   teams={teams}
+                 />
+               ))}
             </View>
           </View>
         </ScrollView>

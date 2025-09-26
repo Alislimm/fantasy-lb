@@ -1,11 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
-import { getUserFantasyTeam } from '../services/api';
+import { getUserFantasyTeam, FantasyTeam } from '../services/api';
 import { useAuth } from './useAuth';
 
 export const useUserFantasyTeam = () => {
   const { user } = useAuth();
 
-  return useQuery({
+  return useQuery<FantasyTeam | null>({
     queryKey: ['userFantasyTeam', user?.id],
     queryFn: async () => {
       if (!user?.id) {
@@ -16,15 +16,15 @@ export const useUserFantasyTeam = () => {
         const response = await getUserFantasyTeam(user.id);
         console.log('[useUserFantasyTeam] Response:', response);
         console.log('[useUserFantasyTeam] Response type:', typeof response);
-        console.log('[useUserFantasyTeam] Is array:', Array.isArray(response));
+        console.log('[useUserFantasyTeam] Squad length:', response?.squad?.length || 0);
         return response;
       } catch (error: any) {
         console.log('[useUserFantasyTeam] Error:', error);
         console.log('[useUserFantasyTeam] Error status:', error?.response?.status);
         console.log('[useUserFantasyTeam] Error data:', error?.response?.data);
-        // If user doesn't have a team, return empty array
+        // If user doesn't have a team, return null
         if (error?.response?.status === 404) {
-          return [];
+          return null;
         }
         throw error;
       }
