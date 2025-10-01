@@ -14,14 +14,14 @@ export const useUserFantasyTeam = () => {
       
       try {
         const response = await getUserFantasyTeam(user.id);
-        console.log('[useUserFantasyTeam] Response:', response);
-        console.log('[useUserFantasyTeam] Response type:', typeof response);
-        console.log('[useUserFantasyTeam] Squad length:', response?.squad?.length || 0);
+        // console.log('[useUserFantasyTeam] Response:', response);
+        // console.log('[useUserFantasyTeam] Response type:', typeof response);
+        // console.log('[useUserFantasyTeam] Squad length:', response?.squad?.length || 0);
         return response;
       } catch (error: any) {
-        console.log('[useUserFantasyTeam] Error:', error);
-        console.log('[useUserFantasyTeam] Error status:', error?.response?.status);
-        console.log('[useUserFantasyTeam] Error data:', error?.response?.data);
+        // console.log('[useUserFantasyTeam] Error:', error);
+        // console.log('[useUserFantasyTeam] Error status:', error?.response?.status);
+        // console.log('[useUserFantasyTeam] Error data:', error?.response?.data);
         // If user doesn't have a team, return null
         if (error?.response?.status === 404) {
           return null;

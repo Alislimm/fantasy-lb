@@ -51,7 +51,7 @@ const getTeamJerseyById = (teamId: number, teams: Team[] | undefined, playerName
   if (!teams || !teamId) return undefined;
   
   const team = teams.find(t => t.id === teamId);
-  console.log(`[getTeamJerseyById] Player: ${playerName || 'Unknown'}, Looking for teamId: ${teamId}, Found:`, team ? { id: team.id, name: team.name, jerseyUrl: team.jerseyUrl } : 'No match');
+  // console.log(`[getTeamJerseyById] Player: ${playerName || 'Unknown'}, Looking for teamId: ${teamId}, Found:`, team ? { id: team.id, name: team.name, jerseyUrl: team.jerseyUrl } : 'No match');
   
   return team?.jerseyUrl;
 };
@@ -60,8 +60,8 @@ const getTeamJerseyById = (teamId: number, teams: Team[] | undefined, playerName
 const getTeamJersey = (teamName: string, teams: Team[] | undefined) => {
   if (!teams || !teamName) return undefined;
   
-  console.log(`[getTeamJersey] Looking for team: "${teamName}"`);
-  console.log(`[getTeamJersey] Available teams:`, teams.map(t => ({ id: t.id, name: t.name, shortName: t.shortName, jerseyUrl: t.jerseyUrl })));
+  // console.log(`[getTeamJersey] Looking for team: "${teamName}"`);
+  // console.log(`[getTeamJersey] Available teams:`, teams.map(t => ({ id: t.id, name: t.name, shortName: t.shortName, jerseyUrl: t.jerseyUrl })));
   
   // Try exact match first
   let team = teams.find(t => t.name === teamName);
@@ -81,7 +81,7 @@ const getTeamJersey = (teamName: string, teams: Team[] | undefined) => {
     );
   }
   
-  console.log(`[getTeamJersey] Found team:`, team ? { id: team.id, name: team.name, jerseyUrl: team.jerseyUrl } : 'No match');
+  // console.log(`[getTeamJersey] Found team:`, team ? { id: team.id, name: team.name, jerseyUrl: team.jerseyUrl } : 'No match');
   
   return team?.jerseyUrl;
 };
@@ -130,9 +130,9 @@ const FilledPlayerSlot = ({
   isViceCaptain?: boolean;
   teams?: Team[];
 }) => {
-  const teamName = player.team?.name || (player as any).teamName || 'Unknown Team';
-  console.log(`[FilledPlayerSlot] Player: ${player.firstName} ${player.lastName}, teamId: ${player.team?.id}, teamName: "${teamName}"`);
-  const jerseyUrl = getTeamJerseyById(player.team?.id, teams, `${player.firstName} ${player.lastName}`) || getTeamJersey(teamName, teams);
+  const teamName = player.teamName || player.team?.name || 'Unknown Team';
+  // console.log(`[FilledPlayerSlot] Player: ${player.firstName} ${player.lastName}, teamId: ${player.teamId}, teamName: "${teamName}"`);
+  const jerseyUrl = getTeamJerseyById(player.teamId, teams, `${player.firstName} ${player.lastName}`) || getTeamJersey(teamName, teams);
   
   return (
     <TouchableOpacity style={styles.playerContainer} onPress={onPress} activeOpacity={0.8}>
@@ -155,8 +155,8 @@ const FilledPlayerSlot = ({
             source={{ uri: jerseyUrl }} 
             style={styles.teamJersey}
             resizeMode="contain"
-            onError={() => console.log(`[PickTeam] Failed to load jersey for ${teamName}: ${jerseyUrl}`)}
-            onLoad={() => console.log(`[PickTeam] Successfully loaded jersey for ${teamName}`)}
+            onError={() => {/* console.log(`[PickTeam] Failed to load jersey for ${teamName}: ${jerseyUrl}`) */}}
+            onLoad={() => {/* console.log(`[PickTeam] Successfully loaded jersey for ${teamName}`) */}}
           />
           <View style={styles.jerseyOverlay}>
             <Text style={styles.jerseyNumber}>{player.id}</Text>
@@ -178,7 +178,7 @@ const FilledPlayerSlot = ({
       {/* Player Info */}
       <View style={styles.playerInfo}>
         <Text style={styles.playerName} numberOfLines={1}>{player.firstName} {player.lastName}</Text>
-        <Text style={styles.playerPrice}>${player.marketValue || (player as any).price || 0}M</Text>
+        <Text style={styles.playerPrice}>${player.price || player.marketValue || 0}M</Text>
       </View>
     </TouchableOpacity>
   );
@@ -237,10 +237,11 @@ const PlayerSelectionModal = ({ visible, position, onClose, onPlayerSelect, curr
               <ActivityIndicator style={styles.loading} />
             ) : (
               players?.map((player: Player) => {
-                console.log(`[PlayerSelectionModal] Player: ${player.firstName} ${player.lastName}, marketValue: ${player.marketValue}, price: ${(player as any).price}`);
-                console.log(`[PlayerSelectionModal] Player team data:`, player.team);
-                console.log(`[PlayerSelectionModal] Player team name:`, player.team?.name);
-                const playerPrice = player.marketValue || (player as any).price || 0;
+                // console.log(`[PlayerSelectionModal] Player: ${player.firstName} ${player.lastName}, price: ${player.price}, marketValue: ${player.marketValue}`);
+                // console.log(`[PlayerSelectionModal] Player teamId:`, player.teamId);
+                // console.log(`[PlayerSelectionModal] Player teamName:`, player.teamName);
+                // console.log(`[PlayerSelectionModal] Full player object:`, JSON.stringify(player, null, 2));
+                const playerPrice = player.price || player.marketValue || 0;
                 const wouldExceedBudget = (currentTeamValue + playerPrice) > 100;
                 const isAlreadySelected = getAllSelectedPlayerIds().includes(player.id);
                 const isDisabled = wouldExceedBudget || isAlreadySelected;
@@ -266,7 +267,7 @@ const PlayerSelectionModal = ({ visible, position, onClose, onPlayerSelect, curr
                       styles.playerItemTeam,
                       isDisabled && styles.playerItemDisabled
                     ]}>
-                      {player.team?.name || (player as any).teamName || 'Unknown Team'}
+                      {player.teamName || player.team?.name || 'Unknown Team'}
                     </Text>
                     <Text style={[
                       styles.playerItemPrice,
@@ -308,9 +309,9 @@ const PlayerModal = ({
     return null;
   }
 
-  const teamName = player.team?.name || (player as any).teamName || 'Unknown Team';
-  console.log(`[PlayerModal] Player: ${player.firstName} ${player.lastName}, teamId: ${player.team?.id || 0}, teamName: "${teamName}"`);
-  const jerseyUrl = getTeamJerseyById(player.team?.id || 0, teams, `${player.firstName} ${player.lastName}`) || getTeamJersey(teamName, teams);
+  const teamName = player.teamName || player.team?.name || 'Unknown Team';
+  // console.log(`[PlayerModal] Player: ${player.firstName} ${player.lastName}, teamId: ${player.teamId}, teamName: "${teamName}"`);
+  const jerseyUrl = getTeamJerseyById(player.teamId, teams, `${player.firstName} ${player.lastName}`) || getTeamJersey(teamName, teams);
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
@@ -324,8 +325,8 @@ const PlayerModal = ({
                   source={{ uri: jerseyUrl }} 
                   style={styles.teamJersey}
                   resizeMode="contain"
-                  onError={() => console.log(`[PlayerModal] Failed to load jersey for ${teamName}: ${jerseyUrl}`)}
-                  onLoad={() => console.log(`[PlayerModal] Successfully loaded jersey for ${teamName}`)}
+                  onError={() => {/* console.log(`[PlayerModal] Failed to load jersey for ${teamName}: ${jerseyUrl}`) */}}
+                  onLoad={() => {/* console.log(`[PlayerModal] Successfully loaded jersey for ${teamName}`) */}}
                 />
                 <View style={styles.jerseyOverlay}>
                   <Text style={styles.jerseyNumber}>{player.id}</Text>
@@ -346,7 +347,7 @@ const PlayerModal = ({
             <View style={styles.playerModalInfo}>
               <Text style={styles.playerModalName}>{player.firstName} {player.lastName}</Text>
               <Text style={styles.playerModalTeam}>{teamName}</Text>
-              <Text style={styles.playerModalPrice}>${player.marketValue || (player as any).price || 0}M</Text>
+              <Text style={styles.playerModalPrice}>${player.price || player.marketValue || 0}M</Text>
             </View>
           </View>
 
@@ -362,7 +363,7 @@ const PlayerModal = ({
             </View>
             <View style={styles.statRow}>
               <Text style={styles.statLabel}>Price:</Text>
-              <Text style={styles.statValue}>${player.marketValue || (player as any).price || 0}M</Text>
+              <Text style={styles.statValue}>${player.price || player.marketValue || 0}M</Text>
             </View>
             <View style={styles.statRow}>
               <Text style={styles.statLabel}>Ownership:</Text>
@@ -486,7 +487,7 @@ const PlayerInfoModal = ({
             </View>
             <View style={styles.playerInfoRow}>
               <Text style={styles.playerInfoLabel}>Price:</Text>
-              <Text style={styles.playerInfoValue}>${player.marketValue || (player as any).price || 0}M</Text>
+              <Text style={styles.playerInfoValue}>${player.price || player.marketValue || 0}M</Text>
             </View>
             <View style={styles.playerInfoRow}>
               <Text style={styles.playerInfoLabel}>Ownership:</Text>
@@ -531,12 +532,19 @@ export default function PickTeamScreen() {
   const buildSquadMutation = useBuildSquad();
   const { data: teams } = useTeams();
 
-  // Debug logging
-  console.log('[PickTeamScreen] fantasyTeam:', fantasyTeam);
-  console.log('[PickTeamScreen] fantasyTeam type:', typeof fantasyTeam);
-  console.log('[PickTeamScreen] squad length:', fantasyTeam?.squad?.length || 0);
-  console.log('[PickTeamScreen] userTeamLoading:', userTeamLoading);
-  console.log('[PickTeamScreen] fantasyTeamLoading:', fantasyTeamLoading);
+  // Debug logging - User ID issue only
+  // console.log('[PickTeamScreen] fantasyTeam:', fantasyTeam);
+  // console.log('[PickTeamScreen] fantasyTeam type:', typeof fantasyTeam);
+  // console.log('[PickTeamScreen] squad length:', fantasyTeam?.squad?.length || 0);
+  // console.log('[PickTeamScreen] userTeamLoading:', userTeamLoading);
+  // console.log('[PickTeamScreen] fantasyTeamLoading:', fantasyTeamLoading);
+  console.log('[PickTeamScreen] user object:', user);
+  console.log('[PickTeamScreen] user type:', typeof user);
+  console.log('[PickTeamScreen] user.id:', user?.id);
+  console.log('[PickTeamScreen] user.id type:', typeof user?.id);
+  console.log('[PickTeamScreen] user.id === 0:', user?.id === 0);
+  console.log('[PickTeamScreen] user.id === null:', user?.id === null);
+  console.log('[PickTeamScreen] user.id === undefined:', user?.id === undefined);
   
   // Determine if user needs to create a team or is modifying their existing team
   const hasTeamData = fantasyTeam && fantasyTeam.squad && fantasyTeam.squad.length > 0;
@@ -549,7 +557,7 @@ export default function PickTeamScreen() {
   // Calculate team value for existing team
   const getExistingTeamValue = () => {
     if (!fantasyTeam || !fantasyTeam.squad) return 0;
-    return fantasyTeam.squad.reduce((total: number, squadPlayer: any) => total + (squadPlayer.player.marketValue || squadPlayer.player.price || 0), 0);
+    return fantasyTeam.squad.reduce((total: number, squadPlayer: any) => total + (squadPlayer.player.price || squadPlayer.player.marketValue || 0), 0);
   };
 
   // Calculate total team value
@@ -559,7 +567,7 @@ export default function PickTeamScreen() {
     return [...startingPlayers, ...benchPlayers];
   };
 
-  const totalTeamValue = getAllPlayers().reduce((total, player) => total + (player.marketValue || (player as any).price || 0), 0);
+  const totalTeamValue = getAllPlayers().reduce((total, player) => total + (player.price || player.marketValue || 0), 0);
 
   const handleEmptySlotPress = (index: number, position: string, isBench: boolean = false) => {
     setSelectedSlotIndex(index);
@@ -662,6 +670,15 @@ export default function PickTeamScreen() {
 
 
   const handleSaveTeam = async () => {
+    // console.log('[PickTeamScreen] handleSaveTeam called');
+    console.log('[PickTeamScreen] user:', user);
+    console.log('[PickTeamScreen] user.id:', user?.id);
+    
+    if (!user || !user.id) {
+      Alert.alert('Authentication Error', 'User not logged in. Please log in again.');
+      return;
+    }
+    
     if (totalTeamValue > 100) {
       Alert.alert('Budget Exceeded', 'Your team value exceeds $100M. Please remove some players.');
       return;
@@ -693,11 +710,20 @@ export default function PickTeamScreen() {
         return;
       }
       
+      // console.log('[PickTeamScreen] All validations passed, proceeding with squad creation');
+      // console.log('[PickTeamScreen] teamName:', teamName.trim());
+      // console.log('[PickTeamScreen] captainId:', captainId);
+      // console.log('[PickTeamScreen] viceCaptainId:', viceCaptainId);
+      
       const gameWeekId = 1; // Use gameweek ID 1 as requested
       
       // Prepare squad data
       const startingPlayers = startingTeam.filter(slot => slot.player).map(slot => slot.player!.id);
       const benchPlayers = benchTeam.filter(slot => slot.player).map(slot => slot.player!.id);
+      
+      // console.log('[PickTeamScreen] startingPlayers:', startingPlayers);
+      // console.log('[PickTeamScreen] benchPlayers:', benchPlayers);
+      // console.log('[PickTeamScreen] About to call buildSquadMutation.mutateAsync');
       
       // Build the initial squad (this creates the team and squad in one call)
       const squadResult = await buildSquadMutation.mutateAsync({
@@ -708,6 +734,8 @@ export default function PickTeamScreen() {
         captainPlayerId: captainId || undefined,
         viceCaptainPlayerId: viceCaptainId || undefined,
       });
+      
+      // console.log('[PickTeamScreen] buildSquadMutation completed successfully:', squadResult);
       
       Alert.alert(
         'Congratulations!', 
@@ -764,13 +792,14 @@ export default function PickTeamScreen() {
     const startingPlayers = squadPlayers.slice(0, 5);
     const benchPlayers = squadPlayers.slice(5, 8);
     
-    console.log('[PickTeamScreen] Squad players:', squadPlayers.length);
-    console.log('[PickTeamScreen] Starting players:', startingPlayers.length);
-    console.log('[PickTeamScreen] Bench players:', benchPlayers.length);
+    // console.log('[PickTeamScreen] Squad players:', squadPlayers.length);
+    // console.log('[PickTeamScreen] Starting players:', startingPlayers.length);
+    // console.log('[PickTeamScreen] Bench players:', benchPlayers.length);
+    // console.log('[PickTeamScreen] Starting players data:', startingPlayers.map(p => p.player?.firstName + ' ' + p.player?.lastName));
 
     return (
       <LinearGradient
-        colors={['#CE1126', '#FFFFFF', '#00A651']}
+        colors={['#FFB366', '#FFD9B3', '#FFA500']}
         locations={[0, 0.5, 1]}
         style={[styles.container, { paddingTop: insets.top }]}
       >
@@ -801,13 +830,15 @@ export default function PickTeamScreen() {
               source={require('../../assets/images/basketball-court.jpeg')} 
               style={styles.court}
               resizeMode="cover"
+              onError={(error) => console.log('Basketball court image failed to load:', error)}
+              onLoad={() => console.log('Basketball court image loaded successfully')}
             />
             
             {/* Starting 5 Players - Basketball Formation */}
             <View style={styles.formationContainer}>
               {/* Guards (Bottom) */}
               <View style={styles.guardsRow}>
-                  {startingPlayers[0] && (
+                  {startingPlayers[0] ? (
                     <FilledPlayerSlot
                       player={startingPlayers[0].player}
                       onPress={() => handlePlayerInfoPress(startingPlayers[0].player)}
@@ -815,8 +846,10 @@ export default function PickTeamScreen() {
                       isViceCaptain={false} // You can add vice-captain logic later
                       teams={teams}
                     />
+                  ) : (
+                    <EmptyPlayerSlot position="PG" onPress={() => {}} />
                   )}
-                {startingPlayers[1] && (
+                {startingPlayers[1] ? (
                   <FilledPlayerSlot
                     player={startingPlayers[1].player}
                     onPress={() => handlePlayerInfoPress(startingPlayers[1].player)}
@@ -824,12 +857,14 @@ export default function PickTeamScreen() {
                     isViceCaptain={false}
                     teams={teams}
                   />
+                ) : (
+                  <EmptyPlayerSlot position="SG" onPress={() => {}} />
                 )}
               </View>
               
               {/* Forwards (Middle) */}
               <View style={styles.forwardsRow}>
-                {startingPlayers[2] && (
+                {startingPlayers[2] ? (
                   <FilledPlayerSlot
                     player={startingPlayers[2].player}
                     onPress={() => handlePlayerInfoPress(startingPlayers[2].player)}
@@ -837,8 +872,10 @@ export default function PickTeamScreen() {
                     isViceCaptain={false}
                     teams={teams}
                   />
+                ) : (
+                  <EmptyPlayerSlot position="SF" onPress={() => {}} />
                 )}
-                {startingPlayers[3] && (
+                {startingPlayers[3] ? (
                   <FilledPlayerSlot
                     player={startingPlayers[3].player}
                     onPress={() => handlePlayerInfoPress(startingPlayers[3].player)}
@@ -846,12 +883,14 @@ export default function PickTeamScreen() {
                     isViceCaptain={false}
                     teams={teams}
                   />
+                ) : (
+                  <EmptyPlayerSlot position="PF" onPress={() => {}} />
                 )}
               </View>
               
               {/* Center (Top) */}
               <View style={styles.centerRow}>
-                {startingPlayers[4] && (
+                {startingPlayers[4] ? (
                   <FilledPlayerSlot
                     player={startingPlayers[4].player}
                     onPress={() => handlePlayerInfoPress(startingPlayers[4].player)}
@@ -859,6 +898,8 @@ export default function PickTeamScreen() {
                     isViceCaptain={false}
                     teams={teams}
                   />
+                ) : (
+                  <EmptyPlayerSlot position="C" onPress={() => {}} />
                 )}
               </View>
             </View>
@@ -1135,15 +1176,15 @@ export default function PickTeamScreen() {
                 buildSquadMutation.isPending ||
                 false;
               
-              console.log("🔍 [DEBUG] Button disabled check:", {
-                totalTeamValue,
-                playerCount,
-                hasTeamName,
-                captainId,
-                viceCaptainId,
-                isPending: createTeamMutation.isPending,
-                isDisabled
-              });
+              // console.log("🔍 [DEBUG] Button disabled check:", {
+              //   totalTeamValue,
+              //   playerCount,
+              //   hasTeamName,
+              //   captainId,
+              //   viceCaptainId,
+              //   buildSquadMutationIsPending: buildSquadMutation.isPending,
+              //   isDisabled
+              // });
               
               return isDisabled;
             })()}
@@ -1161,10 +1202,8 @@ export default function PickTeamScreen() {
           >
             {buildSquadMutation.isPending
               ? 'Building Squad...'
-              : false
-                ? 'Creating Lineup...'
-                  : totalTeamValue > 100 
-                    ? 'Budget Exceeded' 
+              : totalTeamValue > 100 
+                ? 'Budget Exceeded' 
                    : getAllPlayers().length !== 8 
                      ? `Select ${8 - getAllPlayers().length} More Players`
                     : !teamName.trim()
@@ -1272,6 +1311,8 @@ const styles = StyleSheet.create({
     shadowRadius: 15,
     borderWidth: 4,
     borderColor: '#FFD700', // Gold border for basketball court
+    minHeight: height * 0.55,
+    position: 'relative',
   },
   court: {
     width: '100%',
@@ -1390,22 +1431,25 @@ const styles = StyleSheet.create({
   },
   formationContainer: {
     position: 'absolute',
-    top: 20,
+    top: 0,
     left: 0,
     right: 0,
-    bottom: 40,
+    bottom: 0,
     justifyContent: 'space-between',
-    paddingVertical: 15,
+    paddingVertical: 20,
     paddingHorizontal: 30,
+    height: '100%',
   },
   guardsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 10,
+    marginBottom: 20,
+    paddingHorizontal: 10,
   },
   centerRow: {
     alignItems: 'center',
+    marginBottom: 20,
   },
   forwardsRow: {
     flexDirection: 'row',

@@ -16,7 +16,7 @@ export const useHasFantasyTeam = () => {
         const response = await hasFantasyTeam(user.id);
         return response;
       } catch (error: any) {
-        console.log('[useHasFantasyTeam] Error:', error);
+        // console.log('[useHasFantasyTeam] Error:', error);
         // If user doesn't have a team, return false
         if (error?.response?.status === 404) {
           return false;

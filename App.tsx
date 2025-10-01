@@ -10,9 +10,12 @@ import { LinearGradient } from "expo-linear-gradient";
 const queryClient = new QueryClient();
 
 function RootNavigator() {
-  const { token, initializing } = useAuth();
+  const { user, initializing } = useAuth();
+  console.log('[RootNavigator] User:', user);
+  console.log('[RootNavigator] Initializing:', initializing);
   if (initializing) return null;
-  return token ? <AppTabs /> : <AuthNavigator />;
+  console.log('[RootNavigator] Navigating to:', user ? 'AppTabs' : 'AuthNavigator');
+  return user ? <AppTabs /> : <AuthNavigator />;
 }
 
 export default function App() {

@@ -5,7 +5,7 @@ export function useTeams(options?: Omit<UseQueryOptions<Team[], Error>, 'queryKe
   return useQuery<Team[], Error>({
     queryKey: ["teams"],
     queryFn: () => {
-      console.log("[useTeams] Calling getTeams API");
+      // console.log("[useTeams] Calling getTeams API");
       return getTeams();
     },
     staleTime: 0, // Always fetch fresh data for debugging

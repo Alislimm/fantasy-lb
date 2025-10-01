@@ -203,7 +203,7 @@ export default function TransfersScreen() {
   if (isLoading) {
     return (
       <LinearGradient
-        colors={['#CE1126', '#FFFFFF', '#00A651']}
+        colors={['#FFB366', '#FFD9B3', '#FFA500']}
         locations={[0, 0.5, 1]}
         style={[styles.container, { paddingTop: insets.top }]}
       >
@@ -218,7 +218,7 @@ export default function TransfersScreen() {
   if (error || !teamData) {
     return (
       <LinearGradient
-        colors={['#CE1126', '#FFFFFF', '#00A651']}
+        colors={['#FFB366', '#FFD9B3', '#FFA500']}
         locations={[0, 0.5, 1]}
         style={[styles.container, { paddingTop: insets.top }]}
       >

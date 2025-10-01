@@ -15,7 +15,7 @@ const getTeamJerseyById = (teamId: number, teams: Team[] | undefined, playerName
   if (!teams || !teamId) return undefined;
   
   const team = teams.find(t => t.id === teamId);
-  console.log(`[MyTeam][getTeamJerseyById] Player: ${playerName || 'Unknown'}, Looking for teamId: ${teamId}, Found:`, team ? { id: team.id, name: team.name, jerseyUrl: team.jerseyUrl } : 'No match');
+  console.log(`[Points][getTeamJerseyById] Player: ${playerName || 'Unknown'}, Looking for teamId: ${teamId}, Found:`, team ? { id: team.id, name: team.name, jerseyUrl: team.jerseyUrl } : 'No match');
   
   return team?.jerseyUrl;
 };
@@ -24,8 +24,8 @@ const getTeamJerseyById = (teamId: number, teams: Team[] | undefined, playerName
 const getTeamJersey = (teamName: string, teams: Team[] | undefined) => {
   if (!teams || !teamName) return undefined;
   
-  console.log(`[MyTeam][getTeamJersey] Looking for team: "${teamName}"`);
-  console.log(`[MyTeam][getTeamJersey] Available teams:`, teams.map(t => ({ id: t.id, name: t.name, shortName: t.shortName, jerseyUrl: t.jerseyUrl })));
+  console.log(`[Points][getTeamJersey] Looking for team: "${teamName}"`);
+  console.log(`[Points][getTeamJersey] Available teams:`, teams.map(t => ({ id: t.id, name: t.name, shortName: t.shortName, jerseyUrl: t.jerseyUrl })));
   
   // Try exact match first
   let team = teams.find(t => t.name === teamName);
@@ -45,7 +45,7 @@ const getTeamJersey = (teamName: string, teams: Team[] | undefined) => {
     );
   }
   
-  console.log(`[MyTeam][getTeamJersey] Found team:`, team ? { id: team.id, name: team.name, jerseyUrl: team.jerseyUrl } : 'No match');
+  console.log(`[Points][getTeamJersey] Found team:`, team ? { id: team.id, name: team.name, jerseyUrl: team.jerseyUrl } : 'No match');
   
   return team?.jerseyUrl;
 };
@@ -106,8 +106,8 @@ const BasketballJersey = ({ player, isStarting, isCaptain, isViceCaptain, onPlay
             source={{ uri: jerseyUrl }} 
             style={styles.teamJersey}
             resizeMode="contain"
-            onError={() => console.log(`[MyTeam] Failed to load jersey for ${player.team.name}: ${jerseyUrl}`)}
-            onLoad={() => console.log(`[MyTeam] Successfully loaded jersey for ${player.team.name}`)}
+            onError={() => console.log(`[Points] Failed to load jersey for ${player.team.name}: ${jerseyUrl}`)}
+            onLoad={() => console.log(`[Points] Successfully loaded jersey for ${player.team.name}`)}
           />
           <View style={styles.jerseyOverlay}>
             <Text style={styles.jerseyNumber}>{player.id}</Text>
@@ -218,7 +218,7 @@ const PlayerModal = ({ visible, player, isCaptain, isViceCaptain, onClose, onMak
   );
 };
 
-export default function MyTeamScreen() {
+export default function PointsScreen() {
   const insets = useSafeAreaInsets();
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
@@ -305,7 +305,7 @@ export default function MyTeamScreen() {
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* Header */}
         <View style={styles.header}>
-          <Text variant="headlineLarge" style={styles.title}>My Team</Text>
+          <Text variant="headlineLarge" style={styles.title}>Points</Text>
           <Text variant="bodyMedium" style={styles.subtitle}>
             Select captain and vice-captain for your starting lineup
           </Text>

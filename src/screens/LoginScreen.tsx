@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View, StyleSheet, Dimensions, Image, KeyboardAvoidingView, ScrollView, Platform } from "react-native";
+import { View, StyleSheet, Dimensions, Image, KeyboardAvoidingView, ScrollView, Platform, Alert } from "react-native";
 import { TextInput, Button, Text } from "react-native-paper";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { LinearGradient } from "expo-linear-gradient";
@@ -35,39 +35,47 @@ export default function LoginScreen({ navigation }: Props) {
   const { login } = useAuth();
 
   const mutation = useMutation({
-    mutationFn: () => loginApi(usernameOrEmail, password),
+    mutationFn: () => {
+      console.log('🔐 [LOGIN] Calling login API with request:', {
+        usernameOrEmail,
+        password: '***' // Hide password for security
+      });
+      return loginApi(usernameOrEmail, password);
+    },
     onSuccess: async (data) => {
+      console.log('✅ [LOGIN] Response from login received:', data);
       console.log('[Login] Login successful, response data:', data);
+      console.log('[Login] data.id:', data.id);
+      console.log('[Login] data.id type:', typeof data.id);
+      console.log('[Login] data.username:', data.username);
+      console.log('[Login] data.email:', data.email);
+      console.log('[Login] data.role:', data.role);
+      console.log('[Login] data.hasFantasyTeam:', data.hasFantasyTeam);
       
       // Create user object from response
       const user = {
-        id: data.userId,
+        id: data.id,
         username: data.username,
-        email: data.username, // Using username as email since email not provided
-        role: data.role
+        email: data.email,
+        role: data.role,
+        hasFantasyTeam: data.hasFantasyTeam
       };
       
-      // First login with the user data
-      await login(data.token, user);
+      console.log('[Login] Created user object:', user);
+      console.log('[Login] User.id:', user.id);
+      console.log('[Login] User.id type:', typeof user.id);
+      console.log('[Login] User object keys:', Object.keys(user));
       
-      // Then check if user has a fantasy team
-      if (data.userId) {
-        console.log('[Login] Checking hasFantasyTeam for user ID:', data.userId);
-        try {
-          const hasTeamResponse = await hasFantasyTeam(data.userId);
-          console.log('[Login] hasFantasyTeam response:', hasTeamResponse);
-          // Update user with hasFantasyTeam flag
-          await login(data.token, { ...user, hasFantasyTeam: hasTeamResponse });
-          console.log('[Login] Updated user with hasFantasyTeam:', hasTeamResponse);
-        } catch (error) {
-          console.log('[Login] Error checking hasFantasyTeam:', error);
-          // If API fails, assume no team
-          await login(data.token, { ...user, hasFantasyTeam: false });
-          console.log('[Login] Set hasFantasyTeam to false due to error');
-        }
-      } else {
-        console.log('[Login] No user ID found, skipping hasFantasyTeam check');
-      }
+      // First login with the user data (token validation disabled for now)
+      console.log('[Login] Calling login with user:', user);
+      await login('', user); // No token since authentication is disabled
+      console.log('[Login] Login call completed');
+      
+      // The hasFantasyTeam status is already included in the API response
+      console.log('[Login] hasFantasyTeam from API response:', data.hasFantasyTeam);
+      
+      // No need to make additional API call since hasFantasyTeam is already in the response
+      // The user object already has the correct hasFantasyTeam value from the API
     },
   });
 
@@ -78,7 +86,7 @@ export default function LoginScreen({ navigation }: Props) {
 
   return (
     <LinearGradient
-      colors={['#CE1126', '#FFFFFF', '#00A651']} // Lebanese flag colors: Red, White, Green
+      colors={['#FFB366', '#FFD9B3', '#FFA500']} // Light orange gradient
       locations={[0, 0.5, 1]}
       style={[styles.container, { paddingTop: insets.top }]}
     >

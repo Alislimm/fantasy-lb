@@ -74,7 +74,7 @@ export default function HomeScreen({ navigation }: Props) {
 
   return (
     <LinearGradient
-      colors={['#CE1126', '#FFFFFF', '#00A651']} // Lebanese flag colors: Red, White, Green
+      colors={['#FFB366', '#FFD9B3', '#FFA500']} // Light orange gradient
       locations={[0, 0.5, 1]}
       style={[styles.container, { paddingTop: insets.top }]}
     >

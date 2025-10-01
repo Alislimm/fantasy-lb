@@ -17,9 +17,9 @@ export const useFixtures = (options: UseFixturesOptions = {}) => {
   return useQuery({
     queryKey: ['fixtures', gameWeekId],
     queryFn: async (): Promise<Fixture[]> => {
-      console.log(`[Fixtures] Fetching fixtures for gameweek ${gameWeekId}`);
+      // console.log(`[Fixtures] Fetching fixtures for gameweek ${gameWeekId}`);
       const response = await api.get(`/api/gameweek/${gameWeekId}/fixtures/formatted`);
-      console.log('[Fixtures] Raw response:', response.data);
+      // console.log('[Fixtures] Raw response:', response.data);
       
       // Parse the formatted strings into Fixture objects
       const fixtures = response.data.map((fixtureString: string) => {
@@ -33,13 +33,13 @@ export const useFixtures = (options: UseFixturesOptions = {}) => {
         };
       });
       
-      console.log('[Fixtures] Parsed fixtures:', fixtures);
+      // console.log('[Fixtures] Parsed fixtures:', fixtures);
       return fixtures;
     },
     enabled: enabled && !!gameWeekId,
     staleTime: 5 * 60 * 1000, // 5 minutes
     retry: (failureCount, error) => {
-      console.log(`[Fixtures] Retry attempt ${failureCount} for gameweek ${gameWeekId}:`, error);
+      // console.log(`[Fixtures] Retry attempt ${failureCount} for gameweek ${gameWeekId}:`, error);
       return failureCount < 3;
     },
   });

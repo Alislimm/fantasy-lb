@@ -237,7 +237,7 @@ export default function FixturesScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0F0F0F',
+    backgroundColor: '#FFB366',
   },
   scrollContent: {
     paddingBottom: 30,

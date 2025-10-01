@@ -3,8 +3,9 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 type AuthUser = {
   id: number;
+  username: string;
   email: string;
-  roles?: string[];
+  role: string;
   hasFantasyTeam?: boolean;
 };
 
@@ -46,9 +47,18 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
         AsyncStorage.getItem(TOKEN_KEY),
         AsyncStorage.getItem(USER_KEY),
       ]);
+      console.log('[AuthContext] Hydrate - token:', token);
+      console.log('[AuthContext] Hydrate - userJson:', userJson);
+      
       const user = userJson ? (JSON.parse(userJson) as AuthUser) : null;
+      console.log('[AuthContext] Hydrate - parsed user:', user);
+      console.log('[AuthContext] Hydrate - user.id:', user?.id);
+      console.log('[AuthContext] Hydrate - user.id type:', typeof user?.id);
+      console.log('[AuthContext] Hydrate - user keys:', user ? Object.keys(user) : 'null');
+      
       setState({ token, user, initializing: false });
     } catch (e) {
+      console.log('[AuthContext] Hydrate error:', e);
       setState({ token: null, user: null, initializing: false });
     }
   }, []);
@@ -58,11 +68,29 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
   }, [hydrate]);
 
   const login = useCallback(async (token: string, user?: AuthUser | null) => {
-    await AsyncStorage.setItem(TOKEN_KEY, token);
-    if (user) {
-      await AsyncStorage.setItem(USER_KEY, JSON.stringify(user));
+    console.log('[AuthContext] Login called with user:', user);
+    console.log('[AuthContext] User type:', typeof user);
+    console.log('[AuthContext] User.id:', user?.id);
+    console.log('[AuthContext] User.id type:', typeof user?.id);
+    
+    // Store token only if it's not null/undefined (since auth is disabled for now)
+    if (token && token !== 'undefined' && token !== 'null') {
+      await AsyncStorage.setItem(TOKEN_KEY, token);
     }
-    setState((prev) => ({ ...prev, token, user: user ?? prev.user }));
+    if (user) {
+      console.log('[AuthContext] About to store user:', user);
+      console.log('[AuthContext] User.id before storing:', user.id);
+      console.log('[AuthContext] User keys before storing:', Object.keys(user));
+      await AsyncStorage.setItem(USER_KEY, JSON.stringify(user));
+      console.log('[AuthContext] User stored in AsyncStorage:', JSON.stringify(user));
+    }
+    setState((prev) => {
+      const newState = { ...prev, token, user: user ?? prev.user };
+      console.log('[AuthContext] State updated:', newState);
+      console.log('[AuthContext] New state user:', newState.user);
+      console.log('[AuthContext] New state user.id:', newState.user?.id);
+      return newState;
+    });
   }, []);
 
   const logout = useCallback(async () => {

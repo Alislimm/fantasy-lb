@@ -22,7 +22,7 @@ export default function SplashScreen({ onFinish }: SplashScreenProps) {
   }, [onFinish]);
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <View style={styles.container}>
       <View style={styles.imageContainer}>
         <Image 
           source={require('../../assets/images/splash_screen.png')} 
@@ -39,9 +39,9 @@ export default function SplashScreen({ onFinish }: SplashScreenProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#F5F5F5', // Light gray background to match image
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF', // White background
   },
   imageContainer: {
     justifyContent: 'center',
@@ -50,9 +50,9 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   splashImage: {
-    width: 350,
-    height: 350,
-    maxWidth: width * 0.85,
-    maxHeight: height * 0.7,
+    width: width * 0.95, // 95% of screen width
+    height: height * 0.85, // 85% of screen height
+    maxWidth: 500,
+    maxHeight: 500,
   },
 });
