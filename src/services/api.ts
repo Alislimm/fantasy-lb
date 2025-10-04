@@ -4,9 +4,9 @@ import { Platform } from "react-native";
 
 // Platform-specific URLs
 const DEFAULT_BASE_URL = Platform.select({
-  ios: "http://172.31.120.119:8080",
-  android: "http://172.31.120.119:8080", 
-  default: "http://172.31.120.119:8080",
+  ios: "https://fantasy-ms.onrender.com/",
+  android: "https://fantasy-ms.onrender.com/", 
+  default: "https://fantasy-ms.onrender.com/",
 });
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL || DEFAULT_BASE_URL;
@@ -55,7 +55,7 @@ api.interceptors.request.use(async (config) => {
   // );
   
   // Force the base URL to ensure it's correct
-  config.baseURL = "http://172.31.120.119:8080";
+  config.baseURL = "https://fantasy-ms.onrender.com/";
   return config;
 });
 
